@@ -1,0 +1,28 @@
+# Environment variables
+.env
+.env.bak
+.env.local
+
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Database
+*.sqlite
+*.sqlite3
+
+# Logs
+logs/
+*.log
+
+# Data
+data/input/*.csv
+data/quarantine/*.csv
+# Keep the directories themselves if needed, but usually we ignore the contents
+# depending on if we want to track sample data. I'll assume generated data is ignored.
+
+# OS generated files
+Thumbs.db
+Desktop.ini
+.DS_Store

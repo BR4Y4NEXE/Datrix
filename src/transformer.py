@@ -84,11 +84,11 @@ def normalize_columns(df: pd.DataFrame) -> pd.DataFrame:
     # Define mapping: expected_name -> list of common aliases (all lowercase for matching)
     column_aliases = {
         'ID': ['id', 'item_id', 'transaction_id', 'order_id', 'sale_id', 'record_id', 'no', 'num', 'number', '#'],
-        'Date': ['date', 'fecha', 'sale_date', 'order_date', 'transaction_date', 'dt'],
-        'Product': ['product', 'producto', 'product_name', 'item', 'item_name', 'description', 'desc', 'nombre'],
-        'Qty': ['qty', 'quantity', 'cantidad', 'units', 'count', 'amount', 'qty_sold'],
-        'Price': ['price', 'precio', 'unit_price', 'cost', 'valor', 'value', 'price_usd'],
-        'Store_ID': ['store_id', 'storeid', 'store', 'tienda', 'branch', 'branch_id', 'location', 'location_id', 'sucursal'],
+        'Date': ['date', 'fecha', 'sale_date', 'order_date', 'transaction_date', 'dt', 'created_at'],
+        'Product': ['product', 'producto', 'product_name', 'product_category', 'product_id', 'item', 'item_name', 'description', 'desc', 'nombre', 'category'],
+        'Qty': ['qty', 'quantity', 'cantidad', 'units', 'count', 'amount', 'qty_sold', 'quantity_sold', 'units_sold'],
+        'Price': ['price', 'precio', 'unit_price', 'cost', 'valor', 'value', 'price_usd', 'total_revenue', 'sale_price'],
+        'Store_ID': ['store_id', 'storeid', 'store', 'tienda', 'branch', 'branch_id', 'location', 'location_id', 'sucursal', 'customer_region', 'region', 'channel'],
     }
     
     rename_map = {}

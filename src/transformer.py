@@ -73,14 +73,63 @@ def clean_quantity(qty) -> int:
     except (ValueError, TypeError):
         return 0
 
+def normalize_columns(df: pd.DataFrame) -> pd.DataFrame:
+    """
+    Normalize column names to the expected schema: ID, Date, Product, Qty, Price, Store_ID.
+    Uses case-insensitive matching and common aliases.
+    """
+    # Strip whitespace from column names
+    df.columns = df.columns.str.strip()
+    
+    # Define mapping: expected_name -> list of common aliases (all lowercase for matching)
+    column_aliases = {
+        'ID': ['id', 'item_id', 'transaction_id', 'order_id', 'sale_id', 'record_id', 'no', 'num', 'number', '#'],
+        'Date': ['date', 'fecha', 'sale_date', 'order_date', 'transaction_date', 'dt'],
+        'Product': ['product', 'producto', 'product_name', 'item', 'item_name', 'description', 'desc', 'nombre'],
+        'Qty': ['qty', 'quantity', 'cantidad', 'units', 'count', 'amount', 'qty_sold'],
+        'Price': ['price', 'precio', 'unit_price', 'cost', 'valor', 'value', 'price_usd'],
+        'Store_ID': ['store_id', 'storeid', 'store', 'tienda', 'branch', 'branch_id', 'location', 'location_id', 'sucursal'],
+    }
+    
+    rename_map = {}
+    lower_cols = {col.lower(): col for col in df.columns}
+    
+    for expected_name, aliases in column_aliases.items():
+        # Skip if column already exists with exact name
+        if expected_name in df.columns:
+            continue
+        # Try to find a match from aliases
+        for alias in aliases:
+            if alias in lower_cols:
+                rename_map[lower_cols[alias]] = expected_name
+                break
+    
+    if rename_map:
+        logger.info(f"Column mapping applied: {rename_map}")
+        df = df.rename(columns=rename_map)
+    
+    return df
+
+
 def transform(df: pd.DataFrame) -> TransformResult:
     """
     Applies cleaning rules and separates valid vs invalid rows.
     """
     total = len(df)
     
-    # We will build masks for valid rows
-    # But first, we need to clean the data to check validity
+    # Normalize column names to handle different CSV formats
+    df = normalize_columns(df)
+    
+    # Validate required columns exist
+    required = ['ID', 'Date', 'Product', 'Qty', 'Price', 'Store_ID']
+    missing = [col for col in required if col not in df.columns]
+    if missing:
+        available = list(df.columns)
+        raise KeyError(
+            f"Missing required columns after normalization: {missing}. "
+            f"Available columns: {available}. "
+            f"Please ensure your CSV has columns matching: {required}"
+        )
     
     # Work on a copy to avoid SettingWithCopy warnings on input df
     processing_df = df.copy()

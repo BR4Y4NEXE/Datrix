@@ -11,8 +11,18 @@ export function useWebSocket(runId) {
             wsRef.current.close();
         }
 
-        const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-        const wsUrl = `${protocol}//${window.location.host}/ws/logs/${id}`;
+        const apiUrl = import.meta.env.VITE_API_URL;
+        let wsUrl;
+        if (apiUrl) {
+            // Production: derive WS URL from the API base URL
+            const url = new URL(apiUrl);
+            const wsProtocol = url.protocol === 'https:' ? 'wss:' : 'ws:';
+            wsUrl = `${wsProtocol}//${url.host}/ws/logs/${id}`;
+        } else {
+            // Development: use Vite proxy via current host
+            const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+            wsUrl = `${protocol}//${window.location.host}/ws/logs/${id}`;
+        }
 
         const ws = new WebSocket(wsUrl);
         wsRef.current = ws;

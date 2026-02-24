@@ -1,4 +1,4 @@
-const API_BASE = '';
+const API_BASE = import.meta.env.VITE_API_URL || '';
 
 async function request(url, options = {}) {
     const response = await fetch(`${API_BASE}${url}`, {
@@ -60,7 +60,7 @@ export async function getAnalytics() {
 }
 
 export async function exportCSV() {
-    const response = await fetch('/data/export');
+    const response = await fetch(`${API_BASE}/data/export`);
     if (!response.ok) throw new Error('Export failed');
     const blob = await response.blob();
     const url = window.URL.createObjectURL(blob);

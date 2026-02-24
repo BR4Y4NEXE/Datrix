@@ -26,3 +26,16 @@ data/quarantine/*.csv
 Thumbs.db
 Desktop.ini
 .DS_Store
+
+# Dependencies
+node_modules/
+dist/
+build/
+.next/
+.serverless/
+.terraform/
+.venv/
+env/
+venv/
+ENV/
+target/

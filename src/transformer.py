@@ -107,7 +107,7 @@ def transform(df: pd.DataFrame) -> TransformResult:
     # Validation Logic
     def validate_row(row):
         reasons = []
-        if not row['clean_id'] or row['clean_id'].lower() == 'nan':
+        if not row['clean_id'] or str(row['clean_id']).lower() == 'nan':
             reasons.append("Missing ID")
         if row['clean_date'] is None:
             reasons.append("Invalid Date")

@@ -7,237 +7,132 @@
   <img src="https://img.shields.io/badge/WebSocket-010101?style=for-the-badge&logo=socket.io&logoColor=white" />
 </p>
 
-# ⚡ FluxCLI — Dynamic ETL Pipeline & Real-Time Dashboard
+# ⚡ Datrix — Dynamic ETL Pipeline & Real-Time Dashboard
 
-> **A CLI-first ETL pipeline that evolved into a full-stack web platform** — now supporting **any CSV schema** with automatic column detection, real-time pipeline monitoring via WebSocket, interactive analytics dashboards, and bilingual i18n support (EN/ES).
-
----
-
-## 🎯 Purpose
-
-FluxCLI automates the processing of CSV data through a robust **Extract → Transform → Load → Notify** pipeline. Originally built as a Python CLI tool for sales data, it was migrated to a modern web platform and later generalized to accept **any CSV schema dynamically**. It provides:
-
-- **Dynamic schema detection** — automatically identifies column types (`numeric`, `date`, `text`) from any CSV
-- **Real-time visibility** into ETL execution via WebSocket-streamed logs
-- **Interactive dashboards** with data analytics, quality metrics, and execution history
-- **Data governance** through a quarantine system that isolates invalid records for review
-- **Automated notifications** via Email and Slack upon pipeline completion
+> **Las empresas que trabajan con archivos CSV no tienen visibilidad de qué pasó con sus datos ni cuántos registros fallaron. Datrix automatiza ese proceso y lo hace auditable en tiempo real.**
 
 ---
 
-## 🏗️ Architecture
+## 🎯 Propósito
+
+Datrix es una plataforma Full-Stack diseñada para solucionar el caos en el procesamiento de datos. Lo que comenzó como una herramienta CLI para pipelines de ventas evolucionó en un motor de ETL (Extract, Transform, Load) **totalmente dinámico** que se adapta a cualquier esquema de CSV.
+
+- **Detección dinámica de esquemas:** Identifica automáticamente tipos de datos (`numeric`, `date`, `text`) sin configuración previa.
+- **Monitoreo en tiempo real:** Visualización del progreso mediante WebSockets (Live Logs).
+- **Dashboard Interactivo:** Métricas de calidad, historial de ejecuciones y analítica visual.
+- **Gobernanza de Datos:** Sistema de cuarentena que aísla registros inválidos para su auditoría.
+- **Notificaciones Automatizadas:** Reportes automáticos vía Email y Slack al finalizar el proceso.
+
+---
+
+## 📸 Screenshots (Próximamente)
+
+> [!NOTE]
+> Aquí se incluirán imágenes del Dashboard, Data Explorer y el sistema de Quarantine.
+
+---
+
+## 🏗️ Arquitectura y Despliegue
+
+El proyecto está diseñado de forma modular para garantizar escalabilidad y facilidad de despliegue:
+
+- **Frontend:** React 19 + Vite 6 (Desplegado en **Vercel**).
+- **Backend:** FastAPI + SQLite (Desplegado en **Render**).
+- **Comunicación:** REST API para datos y WebSockets para logs en vivo.
 
 ```
 ┌─────────────────────────────────┐      ┌──────────────────────────────────┐
-│     React 19 + Vite 6           │      │        FastAPI Backend            │
+│     React 19 (Vercel)           │      │        FastAPI (Render)           │
 │                                 │      │                                  │
 │  Dashboard ─ Analytics          │ HTTP │  /pipeline/run  → PipelineRunner │
 │  DataExplorer ─ History   ◄─────┼──────┼► /data/*        → SQLite queries │
 │  Quarantine                     │  WS  │  /data/schema   → Column types   │
-│                                 │      │  /data/export   → CSV download   │
-│  i18n (EN/ES) ─ Recharts        │      │  /data/reset    → Full cleanup   │
-│  Datrix Logo                    │      │  /ws/{run_id}   → Live logs      │
-└─────────────────────────────────┘      │                                  │
-                                         │  Services:                       │
-                                         │   ├─ pipeline_runner.py          │
-                                         │   └─ log_handler.py (WS bridge)  │
-                                         │                                  │
-                                         │  Core ETL:                       │
-                                         │   ├─ extractor.py                │
-                                         │   ├─ transformer.py (dynamic)    │
-                                         │   ├─ loader.py (JSON datasets)   │
-                                         │   └─ notifier.py (Email/Slack)   │
-                                         │                                  │
-                                         │  Data Layer:                     │
-                                         │   ├─ datasets (JSON rows)        │
-                                         │   ├─ dataset_schema (col types)  │
-                                         │   └─ pipeline_runs (history)     │
-                                         └──────────────────────────────────┘
+│  i18n (EN/ES)                   │      │  /ws/{run_id}   → Live logs      │
+└─────────────────────────────────┘      └──────────────────────────────────┘
 ```
 
 ---
 
-## 🔥 The Migration Challenge
+## 🔥 El Desafío de Ingeniería
 
-This project wasn't just "add a frontend." It was a **full architectural transformation** from a synchronous CLI script to an async, event-driven web platform — and later, from a fixed-schema pipeline to a **fully dynamic ETL engine**. Here's what made it hard:
+Este proyecto representa una transformación arquitectónica completa:
 
-### 🧩 Synchronous → Asynchronous Execution
-
-The original pipeline blocks the process for 30+ seconds during execution. In a web context, that means HTTP timeouts and frozen UIs. **Solution:** Rewrote the orchestration layer using `asyncio.to_thread()`, returning a `run_id` immediately and streaming progress via WebSocket.
-
-### 📡 stdout → WebSocket Log Streaming
-
-The CLI printed logs to the terminal. The web dashboard needed them in real time. **Solution:** Built a custom `logging.Handler` that intercepts log messages and broadcasts them to connected WebSocket clients — supporting multiple concurrent sessions per `run_id`.
-
-### 📁 File Paths → HTTP Uploads
-
-The CLI receives `--file path/to/file.csv`. Browsers don't work that way. **Solution:** Implemented `multipart/form-data` upload with an auto-detect mode that scans for today's file in the `data/` directory.
-
-### 🗃️ Ephemeral → Persistent State
-
-The CLI had no memory — each run was fire-and-forget. The dashboard needs execution history, metrics, and trends. **Solution:** Designed a `pipeline_runs` table in SQLite tracking `total_read`, `total_valid`, `total_rejected`, `db_inserts`, `db_updates`, `duration`, and `status`.
-
-### 🔄 Fixed Schema → Dynamic Schema
-
-The original pipeline was hardcoded for a 6-column sales CSV (`id`, `date`, `product`, `qty`, `price`, `store_id`). **Solution:** Rewrote the transformer with `ColumnSchema` and `TransformResult` dataclasses that auto-detect column types (`numeric`, `date`, `text`). The loader now stores data as JSON rows in a generic `datasets` table with a companion `dataset_schema` table — enabling any CSV to be processed without code changes.
-
-### 🐼 Pandas 3.0 Breaking Change
-
-Pandas 3.0 changed how `NaN` values behave — they no longer auto-cast to strings. This caused a subtle `AttributeError: float has no attribute 'lower'` deep in the transformer. A single missing `str()` wrapper was the fix, but finding it required tracing through real production data.
-
-### 🎨 Two UI Rewrites
-
-The first frontend used glassmorphism (blur, gradients, heavy shadows). It didn't match the target Flatkit design language. **The entire CSS was rewritten** to a flat, clean aesthetic with subtle borders and minimal shadows.
-
-<details>
-<summary><b>📊 Full Issue Tracker (11 problems solved)</b></summary>
-
-| # | Problem | Severity | Category |
-|---|---------|----------|----------|
-| 1 | Blocking synchronous execution | 🔴 High | Architecture |
-| 2 | Logs to stdout with no web channel | 🔴 High | Architecture |
-| 3 | File upload vs local paths | 🟡 Medium | Architecture |
-| 4 | No execution history | 🟡 Medium | Architecture |
-| 5 | Pandas 3.0 NaN + `.lower()` | 🔴 High | Compatibility |
-| 6 | Vite scaffolding failure | 🟡 Medium | Compatibility |
-| 7 | CORS cross-origin blocking | 🟡 Medium | Compatibility |
-| 8 | Recharts tooltip unreadable on dark theme | 🟢 Low | UI/UX |
-| 9 | Sidebar active color mismatch | 🟢 Low | UI/UX |
-| 10 | Glassmorphism vs flat design mismatch | 🟡 Medium | UI/UX |
-| 11 | `$HOME` env variable missing on Windows | 🟢 Low | Environment |
-
-</details>
+1. **De Síncrono a Event-Driven:** El pipeline original bloqueaba la ejecución. Se rediseñó usando `asyncio` y WebSockets para permitir múltiples ejecuciones concurrentes y monitoreo en vivo.
+2. **De Esquema Fijo a Motor Dinámico:** El sistema pasó de procesar 6 columnas fijas a detectar y transformar cualquier estructura CSV mediante una capa de abstracción de metadatos.
+3. **Persistencia y Auditoría:** Se implementó una capa de persistencia en SQLite para llevar un registro histórico de cada fila procesada, validada o rechazada.
 
 ---
 
-## ✨ Features
+## 🧪 Calidad y Testing
 
-| Feature | Description |
-|---------|-------------|
-| **Dynamic Schema** | Automatically detects column types (`numeric`, `date`, `text`) from any CSV — no hardcoded schemas |
-| **ETL Pipeline** | Extract → Transform → Load with data validation, deduplication, and upsert strategies |
-| **Real-Time Logs** | WebSocket-powered live log streaming during pipeline execution |
-| **Dashboard** | KPI cards, execution timeline, and quick-action controls |
-| **Analytics** | Data trends, category breakdown, and comparisons via Recharts |
-| **Data Explorer** | Browse, search, and paginate loaded records with dynamic columns |
-| **CSV Export** | Export processed data as CSV directly from the Data Explorer |
-| **Quarantine** | Review invalid/rejected rows with reason codes |
-| **History** | Full execution log with duration, status, and row-level metrics |
-| **Database Reset** | One-click cleanup of all data, run history, and quarantine files |
-| **i18n** | Bilingual support (English / Español) with persistent language selection |
-| **Smart Toggle** | Auto-detect test data toggle disables automatically when a real CSV is uploaded |
-| **CLI Mode** | Original command-line interface still fully functional |
+La fiabilidad del motor de transformación está garantizada mediante una suite de pruebas con **Pytest**.
+
+- **Cobertura Crítica:** El `transformer.py` cuenta con tests exhaustivos que verifican:
+  - Limpieza y normalización de valores numéricos, fechas y texto.
+  - Detección automática del tipo de columna basado en el contenido.
+  - Validación de esquemas dinámicos con diferentes tipos de archivos (Sales CSV, Amazon-style CSV, etc.).
+  - Rechazo controlado de filas inválidas o incompletas.
+
+Para ejecutar los tests:
+```bash
+pytest tests/test_transformer.py
+```
 
 ---
 
 ## 🚀 Quick Start
 
-### Prerequisites
-
-- **Python 3.10+**
-- **Node.js 18+**
-
-### 1. Clone & Configure
-
+### 1. Clonar el Repositorio
 ```bash
-git clone https://github.com/BR4Y4NEXE/FluxCLI.git
-cd FluxCLI
-cp .env.example .env
-# Edit .env with your SMTP, Slack, and DB settings
+git clone https://github.com/BR4Y4NEXE/Datrix.git
+cd Datrix
 ```
 
-### 2. Backend
+### 2. Configuración (Variables de Entorno)
+Copia el archivo `.env.example` a `.env` y configura tus credenciales de SMTP y Slack.
 
+### 3. Backend (Render)
 ```bash
 pip install -r requirements.txt
 pip install -r requirements-api.txt
-python -m uvicorn backend.main:app --reload --port 8000
+python -m uvicorn backend.main:app --host 0.0.0.0 --port 8000
 ```
 
-### 3. Frontend
-
+### 4. Frontend (Vercel)
 ```bash
 cd frontend
 npm install
 npm run dev
 ```
 
-Open **http://localhost:5173** — the Vite dev server proxies API calls to the backend automatically.
-
-### 4. CLI Mode (Optional)
-
-```bash
-# Auto-detect today's file
-python etl.py --auto
-
-# Dry run (no DB writes, no notifications)
-python etl.py --auto --dry-run
-
-# Process a specific file
-python etl.py --file data/input/my_data.csv
-```
-
 ---
 
-## 📂 Project Structure
+## 📂 Estructura del Proyecto
 
 ```
-FluxCLI/
-├── etl.py                    # Original CLI entry point
-├── mock_data_gen.py          # Test data generator
-├── Procfile                  # Deployment configuration
-├── .python-version           # Python version pinning
-├── backend/
-│   ├── main.py               # FastAPI application
-│   ├── database.py           # SQLite: datasets, dataset_schema, pipeline_runs
-│   ├── models.py             # Pydantic schemas (ColumnSchemaResponse, PaginatedRecords, etc.)
-│   ├── routes/               # API endpoints (pipeline, data, stats)
-│   └── services/
-│       ├── pipeline_runner.py # Async orchestration layer
-│       └── log_handler.py    # WebSocket log bridge
-├── frontend/
-│   └── src/
-│       ├── App.jsx           # Router + sidebar layout
-│       ├── img/              # Datrix logo (datrix-logo-v3.svg)
-│       ├── pages/
-│       │   ├── Dashboard.jsx
-│       │   ├── Analytics.jsx
-│       │   ├── DataExplorer.jsx
-│       │   ├── History.jsx
-│       │   └── Quarantine.jsx
-│       ├── hooks/            # Custom React hooks (useWebSocket)
-│       ├── i18n/
-│       │   ├── LanguageContext.jsx  # React Context for i18n
-│       │   ├── en.json             # English translations
-│       │   └── es.json             # Spanish translations
-│       └── services/         # API client layer (api.js)
-├── src/                      # Core ETL modules
-│   ├── extractor.py
-│   ├── transformer.py        # Dynamic column detection (ColumnSchema, TransformResult)
-│   ├── loader.py             # JSON-based dataset storage
-│   └── notifier.py
-├── config/                   # Environment configuration
-├── data/                     # Input files + quarantine reports
-├── logs/                     # Execution logs
-└── tests/                    # Unit tests
+Datrix/
+├── backend/               # FastAPI Application & Business Logic
+├── frontend/              # React Application (Dashboard & UI)
+├── src/                   # Core ETL Modules (Extractor, Transformer, Loader)
+├── tests/                 # Pytest Suite
+├── data/                  # Input samples & Quarantine reports
+└── etl.py                 # CLI Entry point (Legacy support)
 ```
 
 ---
 
 ## 🛠️ Tech Stack
 
-| Layer | Technology |
+| Capa | Tecnología |
 |-------|-----------|
-| **ETL Core** | Python, Pandas, SQLite, dataclasses, python-dateutil |
+| **Core ETL** | Python, Pandas, SQLite, Dataclasses |
 | **Backend** | FastAPI, Uvicorn, WebSocket |
-| **Frontend** | React 19, Vite 6, React Router 7 |
-| **Charts** | Recharts |
-| **Icons** | Lucide React |
-| **Notifications** | SMTP (Email), Slack Webhooks |
+| **Frontend** | React 19, Vite 6, Recharts, Lucide |
 | **Testing** | Pytest |
+| **Despliegue** | Vercel (Frontend), Render (Backend) |
 
 ---
 
-## 📝 License
+## 📝 Licencia
 
-This project is licensed under the MIT License.
+Este proyecto está bajo la licencia MIT.

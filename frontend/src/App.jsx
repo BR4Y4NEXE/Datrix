@@ -1,9 +1,10 @@
 import { Routes, Route, NavLink, useLocation } from 'react-router-dom';
 import {
     LayoutDashboard, Database, AlertTriangle,
-    History, BarChart3, Zap, Globe
+    History, BarChart3, Globe
 } from 'lucide-react';
 import { useTranslation } from './i18n/LanguageContext';
+import datrixLogo from './img/datrix-logo-v3.svg';
 import Dashboard from './pages/Dashboard';
 import DataExplorer from './pages/DataExplorer';
 import Quarantine from './pages/Quarantine';
@@ -39,12 +40,7 @@ function App() {
             {/* Sidebar */}
             <aside className="sidebar">
                 <div className="sidebar-logo">
-                    <div className="logo-icon">
-                        <Zap size={20} />
-                    </div>
-                    <div>
-                        <h1>Datrix</h1>
-                    </div>
+                    <img src={datrixLogo} alt="Datrix" className="logo-img" />
                 </div>
 
                 <nav className="sidebar-nav">

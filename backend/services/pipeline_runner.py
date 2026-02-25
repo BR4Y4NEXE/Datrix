@@ -72,12 +72,16 @@ def run_pipeline(run_id: str, file_path: str, dry_run: bool = False,
         total_read = len(df)
         logger.info(f"[Run {run_id}] Extract: {total_read} rows read")
 
-        # 2. Transform
+        # 2. Transform (dynamic - auto-detects schema)
         result = transformer.transform(df)
         logger.info(
             f"[Run {run_id}] Transform: {result.total_valid} valid, "
             f"{result.total_rejected} rejected"
         )
+
+        # Log detected schema
+        for col in result.schema:
+            logger.info(f"[Run {run_id}] Schema: {col.original_name} → {col.name} ({col.dtype})")
 
         # 3. Handle Quarantine
         if not result.rejected_df.empty:
@@ -95,7 +99,10 @@ def run_pipeline(run_id: str, file_path: str, dry_run: bool = False,
         if not dry_run:
             data_loader = loader.DataLoader()
             data_loader.init_db()
-            inserts, updates = data_loader.load_data(result.valid_df)
+            # Save schema metadata
+            data_loader.save_schema(run_id, result.schema)
+            # Load data with run_id
+            inserts, updates = data_loader.load_data(result.valid_df, run_id)
             logger.info(f"[Run {run_id}] Load: {inserts} inserted, {updates} updated")
         else:
             logger.info(f"[Run {run_id}] Dry run: Skipping DB load")

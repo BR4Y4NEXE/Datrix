@@ -98,7 +98,7 @@ export default function Quarantine() {
                                 }
                             </div>
 
-                            {/* Expanded detail */}
+                            {/* Expanded detail - dynamic columns */}
                             {expandedFile === file.filename && (
                                 <div style={{ padding: '0 20px 20px', borderTop: '1px solid var(--border-subtle)' }}>
                                     {detailLoading ? (
@@ -110,32 +110,33 @@ export default function Quarantine() {
                                             <table className="data-table">
                                                 <thead>
                                                     <tr>
-                                                        <th>{t('quarantine.id')}</th>
-                                                        <th>{t('quarantine.date')}</th>
-                                                        <th>{t('quarantine.product')}</th>
-                                                        <th>{t('quarantine.qty')}</th>
-                                                        <th>{t('quarantine.price')}</th>
-                                                        <th>{t('quarantine.store')}</th>
-                                                        <th>{t('quarantine.rejectReason')}</th>
+                                                        {(detail.columns || []).map((col) => (
+                                                            <th key={col}>
+                                                                {col === 'reject_reason'
+                                                                    ? t('quarantine.rejectReason')
+                                                                    : col
+                                                                }
+                                                            </th>
+                                                        ))}
                                                     </tr>
                                                 </thead>
                                                 <tbody>
                                                     {detail.rows.map((row, i) => (
                                                         <tr key={i}>
-                                                            <td>{row.ID || <span style={{ color: 'var(--accent-red)' }}>{t('quarantine.empty')}</span>}</td>
-                                                            <td>{row.Date}</td>
-                                                            <td>{row.Product}</td>
-                                                            <td>{row.Qty}</td>
-                                                            <td>{row.Price}</td>
-                                                            <td>{row.Store_ID}</td>
-                                                            <td>
-                                                                <span style={{
-                                                                    color: 'var(--accent-red)', fontSize: '0.8rem',
-                                                                    fontWeight: 500
-                                                                }}>
-                                                                    {row.reject_reason}
-                                                                </span>
-                                                            </td>
+                                                            {(detail.columns || []).map((col) => (
+                                                                <td key={col}>
+                                                                    {col === 'reject_reason' ? (
+                                                                        <span style={{
+                                                                            color: 'var(--accent-red)', fontSize: '0.8rem',
+                                                                            fontWeight: 500
+                                                                        }}>
+                                                                            {row[col]}
+                                                                        </span>
+                                                                    ) : (
+                                                                        row[col] || <span style={{ color: 'var(--accent-red)' }}>{t('quarantine.empty')}</span>
+                                                                    )}
+                                                                </td>
+                                                            ))}
                                                         </tr>
                                                     ))}
                                                 </tbody>

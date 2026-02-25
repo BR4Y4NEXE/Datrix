@@ -132,36 +132,19 @@ a:hover {
 }
 
 .sidebar-logo {
-  padding: 20px 18px;
+  padding: 16px 14px;
   border-bottom: 1px solid var(--border-subtle);
   display: flex;
   align-items: center;
-  gap: 10px;
-}
-
-.sidebar-logo .logo-icon {
-  width: 34px;
-  height: 34px;
-  border-radius: var(--radius-md);
-  background: var(--gradient-primary);
-  display: flex;
-  align-items: center;
   justify-content: center;
-  font-size: 15px;
-  font-weight: 800;
-  color: white;
+  overflow: hidden;
 }
 
-.sidebar-logo h1 {
-  font-size: 1.1rem;
-  font-weight: 700;
-  color: var(--text-primary);
-}
-
-.sidebar-logo .version {
-  font-size: 0.7rem;
-  color: var(--text-muted);
-  font-weight: 400;
+.sidebar-logo .logo-img {
+  width: 100%;
+  max-width: 180px;
+  height: auto;
+  object-fit: contain;
 }
 
 .sidebar-nav {
@@ -589,6 +572,20 @@ a:hover {
 .toggle-label {
   font-size: 0.85rem;
   color: var(--text-secondary);
+}
+
+.toggle-group.disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.toggle.disabled {
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
+.toggle-group.disabled .toggle-label {
+  cursor: not-allowed;
 }
 
 /* ========== Terminal / Log Viewer ========== */

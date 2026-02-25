@@ -1,5 +1,5 @@
 from pydantic import BaseModel
-from typing import Optional, List
+from typing import Optional, List, Dict, Any
 from enum import Enum
 
 
@@ -31,22 +31,25 @@ class PipelineRunResponse(BaseModel):
     error_message: Optional[str] = None
 
 
-class SalesRecordResponse(BaseModel):
-    id: str
-    date: str
-    product: str
-    qty: int
-    price: float
-    store_id: str
-    last_updated: str
-
-
+# Dynamic record response - works with any column structure
 class PaginatedRecords(BaseModel):
-    records: List[SalesRecordResponse]
+    records: List[Dict[str, Any]]
     total: int
     page: int
     per_page: int
     total_pages: int
+
+
+class ColumnSchemaResponse(BaseModel):
+    column_name: str
+    column_type: str
+    original_name: str
+    column_order: int
+
+
+class DatasetSchemaResponse(BaseModel):
+    run_id: str
+    columns: List[ColumnSchemaResponse]
 
 
 class QuarantineFile(BaseModel):
@@ -55,19 +58,10 @@ class QuarantineFile(BaseModel):
     created_at: str
 
 
-class QuarantineRow(BaseModel):
-    ID: str
-    Date: str
-    Product: str
-    Qty: str
-    Price: str
-    Store_ID: str
-    reject_reason: str
-
-
 class QuarantineDetail(BaseModel):
     filename: str
-    rows: List[QuarantineRow]
+    columns: List[str]
+    rows: List[Dict[str, Any]]
     total: int
 
 

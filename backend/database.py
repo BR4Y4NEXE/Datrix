@@ -23,9 +23,9 @@ def get_connection() -> sqlite3.Connection:
 
 
 def init_database():
-    """Initialize both the sales table and pipeline_runs table."""
+    """Initialize all database tables."""
     with get_connection() as conn:
-        # Sales table (same as existing loader.py)
+        # Legacy sales table (kept for backward compatibility)
         conn.execute("""
             CREATE TABLE IF NOT EXISTS sales (
                 id TEXT PRIMARY KEY,
@@ -55,6 +55,39 @@ def init_database():
                 db_updates INTEGER,
                 error_message TEXT
             );
+        """)
+
+        # Dynamic datasets table - stores rows as JSON
+        conn.execute("""
+            CREATE TABLE IF NOT EXISTS datasets (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                run_id TEXT NOT NULL,
+                row_index INTEGER NOT NULL,
+                data TEXT NOT NULL,
+                last_updated TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (run_id) REFERENCES pipeline_runs(id)
+            );
+        """)
+
+        # Dataset schema - stores column metadata per run
+        conn.execute("""
+            CREATE TABLE IF NOT EXISTS dataset_schema (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                run_id TEXT NOT NULL,
+                column_name TEXT NOT NULL,
+                column_type TEXT NOT NULL,
+                original_name TEXT NOT NULL,
+                column_order INTEGER NOT NULL,
+                FOREIGN KEY (run_id) REFERENCES pipeline_runs(id)
+            );
+        """)
+
+        # Index for faster queries
+        conn.execute("""
+            CREATE INDEX IF NOT EXISTS idx_datasets_run_id ON datasets(run_id);
+        """)
+        conn.execute("""
+            CREATE INDEX IF NOT EXISTS idx_dataset_schema_run_id ON dataset_schema(run_id);
         """)
 
         conn.commit()

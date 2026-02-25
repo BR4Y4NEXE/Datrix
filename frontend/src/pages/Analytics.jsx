@@ -4,8 +4,8 @@ import {
     XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend
 } from 'recharts';
 import {
-    BarChart3, Download, TrendingUp, ShoppingBag,
-    Store, PieChart as PieIcon, RefreshCw
+    BarChart3, Download, TrendingUp, Hash,
+    Layers, PieChart as PieIcon, RefreshCw
 } from 'lucide-react';
 import { getAnalytics, exportCSV } from '../services/api';
 import { useTranslation } from '../i18n/LanguageContext';
@@ -29,7 +29,6 @@ export default function Analytics() {
     const [data, setData] = useState(null);
     const [loading, setLoading] = useState(true);
     const [exporting, setExporting] = useState(false);
-    const [activeChart, setActiveChart] = useState('revenue'); // 'revenue' or 'qty'
 
     const fetchData = async () => {
         setLoading(true);
@@ -86,10 +85,12 @@ export default function Analytics() {
         );
     }
 
-    const { by_product, by_store, over_time, summary, quality } = data;
+    const { charts, summary, quality } = data;
+    const numericCols = summary.numeric_columns || [];
+    const textCols = summary.text_columns || [];
 
     // Data quality pie chart data
-    const qualityTotals = quality.reduce(
+    const qualityTotals = (quality || []).reduce(
         (acc, r) => ({
             valid: acc.valid + (r.total_valid || 0),
             rejected: acc.rejected + (r.total_rejected || 0),
@@ -100,6 +101,9 @@ export default function Analytics() {
         { name: t('analytics.validRecords'), value: qualityTotals.valid, color: '#31cab0' },
         { name: t('analytics.rejectedRecords'), value: qualityTotals.rejected, color: '#fc5c65' },
     ];
+
+    // Icons for summary cards
+    const ICONS = [TrendingUp, Hash, Layers, BarChart3];
 
     return (
         <>
@@ -118,119 +122,149 @@ export default function Analytics() {
                 </div>
             </div>
 
-            {/* Summary Cards */}
+            {/* Summary Cards - Dynamic */}
             <div className="metrics-grid">
+                {/* Total Records */}
                 <div className="metric-card">
-                    <div className="metric-icon cyan"><ShoppingBag size={18} /></div>
+                    <div className="metric-icon cyan"><BarChart3 size={18} /></div>
                     <div className="metric-content">
                         <div className="metric-value">{summary.total_records.toLocaleString()}</div>
                         <div className="metric-label">{t('analytics.totalRecords')}</div>
                     </div>
                 </div>
+                {/* Columns Count */}
                 <div className="metric-card">
-                    <div className="metric-icon green"><TrendingUp size={18} /></div>
+                    <div className="metric-icon purple"><Layers size={18} /></div>
                     <div className="metric-content">
-                        <div className="metric-value">${summary.total_revenue.toLocaleString()}</div>
-                        <div className="metric-label">{t('analytics.totalRevenue')}</div>
+                        <div className="metric-value">{summary.columns}</div>
+                        <div className="metric-label">{t('analytics.columns')}</div>
                     </div>
                 </div>
-                <div className="metric-card">
-                    <div className="metric-icon purple"><Store size={18} /></div>
-                    <div className="metric-content">
-                        <div className="metric-value">{summary.unique_stores}</div>
-                        <div className="metric-label">{t('analytics.uniqueStores')}</div>
-                    </div>
-                </div>
-                <div className="metric-card">
-                    <div className="metric-icon amber"><BarChart3 size={18} /></div>
-                    <div className="metric-content">
-                        <div className="metric-value">{summary.unique_products}</div>
-                        <div className="metric-label">{t('analytics.uniqueProducts')}</div>
-                    </div>
-                </div>
+                {/* First two numeric column summaries */}
+                {numericCols.slice(0, 2).map((nc, i) => {
+                    const Icon = ICONS[i % ICONS.length];
+                    return (
+                        <div className="metric-card" key={nc.column}>
+                            <div className={`metric-icon ${i === 0 ? 'green' : 'amber'}`}><Icon size={18} /></div>
+                            <div className="metric-content">
+                                <div className="metric-value">{nc.sum.toLocaleString()}</div>
+                                <div className="metric-label">{t('analytics.sum')}: {nc.original_name}</div>
+                            </div>
+                        </div>
+                    );
+                })}
             </div>
 
-            {/* Revenue Trend Over Time */}
-            {over_time.length > 0 && (
+            {/* Dynamic numeric stats table */}
+            {numericCols.length > 0 && (
                 <div className="card" style={{ marginBottom: 20 }}>
                     <div className="card-title">
-                        <TrendingUp size={16} /> {t('analytics.salesTrend')}
-                        <span className="card-subtitle" style={{ marginLeft: 'auto' }}>
-                            {over_time.length} {t('analytics.dataPoints')}
-                        </span>
+                        <Hash size={16} /> Numeric Column Statistics
                     </div>
-                    <ResponsiveContainer width="100%" height={280}>
-                        <LineChart data={over_time} margin={{ top: 5, right: 20, left: 10, bottom: 5 }}>
-                            <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" />
-                            <XAxis
-                                dataKey="date" stroke="#6b7a8d" fontSize={11}
-                                tickFormatter={(v) => v?.slice(5) || v}
-                            />
-                            <YAxis stroke="#6b7a8d" fontSize={11} />
-                            <Tooltip contentStyle={tooltipStyle} labelStyle={{ color: '#e4e8ee' }} itemStyle={{ color: '#a0aec0' }} />
-                            <Line
-                                type="monotone" dataKey="revenue" name={t('analytics.revenue')}
-                                stroke="#31cab0" strokeWidth={2} dot={false}
-                                activeDot={{ r: 4, fill: '#31cab0' }}
-                            />
-                            <Line
-                                type="monotone" dataKey="qty" name={t('analytics.quantity')}
-                                stroke="#a78bfa" strokeWidth={2} dot={false}
-                                activeDot={{ r: 4, fill: '#a78bfa' }}
-                            />
-                            <Legend wrapperStyle={{ fontSize: '0.8rem', color: '#a0aec0' }} />
-                        </LineChart>
-                    </ResponsiveContainer>
+                    <div className="data-table-wrapper">
+                        <table className="data-table">
+                            <thead>
+                                <tr>
+                                    <th>Column</th>
+                                    <th>{t('analytics.sum')}</th>
+                                    <th>{t('analytics.avg')}</th>
+                                    <th>Min</th>
+                                    <th>Max</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {numericCols.map((nc) => (
+                                    <tr key={nc.column}>
+                                        <td style={{ fontWeight: 600 }}>{nc.original_name}</td>
+                                        <td style={{ color: 'var(--accent-green)' }}>{nc.sum.toLocaleString()}</td>
+                                        <td>{nc.avg.toLocaleString()}</td>
+                                        <td>{nc.min.toLocaleString()}</td>
+                                        <td>{nc.max.toLocaleString()}</td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    </div>
                 </div>
             )}
 
-            <div className="grid-2">
-                {/* Sales by Product */}
-                <div className="card">
+            {/* Text column unique values */}
+            {textCols.length > 0 && (
+                <div className="card" style={{ marginBottom: 20 }}>
                     <div className="card-title">
-                        <ShoppingBag size={16} /> {t('analytics.topProducts')}
+                        <Layers size={16} /> Categorical Columns
                     </div>
-                    <ResponsiveContainer width="100%" height={280}>
-                        <BarChart data={by_product} margin={{ top: 5, right: 10, left: 10, bottom: 60 }}>
-                            <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" />
-                            <XAxis
-                                dataKey="product" stroke="#6b7a8d" fontSize={10}
-                                interval={0} angle={-35} textAnchor="end"
-                            />
-                            <YAxis stroke="#6b7a8d" fontSize={11} />
-                            <Tooltip contentStyle={tooltipStyle} labelStyle={{ color: '#e4e8ee' }} itemStyle={{ color: '#a0aec0' }} cursor={{ stroke: 'rgba(255,255,255,0.1)' }} />
-                            <Bar dataKey="revenue" name={t('analytics.revenue')} radius={[4, 4, 0, 0]}>
-                                {by_product.map((_, i) => (
-                                    <Cell key={i} fill={CHART_COLORS[i % CHART_COLORS.length]} />
-                                ))}
-                            </Bar>
-                        </BarChart>
-                    </ResponsiveContainer>
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12 }}>
+                        {textCols.map((tc) => (
+                            <div key={tc.column} style={{
+                                padding: '10px 16px', borderRadius: 8,
+                                background: 'rgba(255,255,255,0.03)',
+                                border: '1px solid var(--border-subtle)',
+                                minWidth: 120,
+                            }}>
+                                <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginBottom: 4 }}>
+                                    {tc.original_name}
+                                </div>
+                                <div style={{ fontSize: '1.1rem', fontWeight: 600 }}>
+                                    {tc.unique_values} <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)', fontWeight: 400 }}>{t('analytics.uniqueValues')}</span>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
                 </div>
+            )}
 
-                {/* Sales by Store */}
-                <div className="card">
-                    <div className="card-title">
-                        <Store size={16} /> {t('analytics.salesByStore')}
-                    </div>
-                    <ResponsiveContainer width="100%" height={280}>
-                        <BarChart data={by_store} layout="vertical" margin={{ top: 5, right: 20, left: 40, bottom: 5 }}>
-                            <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" />
-                            <XAxis type="number" stroke="#6b7a8d" fontSize={11} />
-                            <YAxis
-                                type="category" dataKey="store_id" stroke="#6b7a8d"
-                                fontSize={11} width={50}
-                            />
-                            <Tooltip contentStyle={tooltipStyle} labelStyle={{ color: '#e4e8ee' }} itemStyle={{ color: '#a0aec0' }} />
-                            <Bar dataKey="revenue" name={t('analytics.revenue')} radius={[0, 4, 4, 0]}>
-                                {by_store.map((_, i) => (
-                                    <Cell key={i} fill={CHART_COLORS[i % CHART_COLORS.length]} />
-                                ))}
-                            </Bar>
-                        </BarChart>
-                    </ResponsiveContainer>
+            {/* Dynamic Charts from Backend */}
+            {charts.length > 0 && (
+                <div className="grid-2">
+                    {charts.map((chart, ci) => (
+                        <div className="card" key={ci}>
+                            <div className="card-title">
+                                {chart.type === 'line' ? <TrendingUp size={16} /> : <BarChart3 size={16} />}
+                                {' '}{chart.title}
+                                <span className="card-subtitle" style={{ marginLeft: 'auto' }}>
+                                    {chart.data.length} {t('analytics.dataPoints')}
+                                </span>
+                            </div>
+                            <ResponsiveContainer width="100%" height={280}>
+                                {chart.type === 'line' ? (
+                                    <LineChart data={chart.data} margin={{ top: 5, right: 20, left: 10, bottom: 5 }}>
+                                        <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" />
+                                        <XAxis
+                                            dataKey={chart.x_key} stroke="#6b7a8d" fontSize={11}
+                                            tickFormatter={(v) => v?.slice(5) || v}
+                                        />
+                                        <YAxis stroke="#6b7a8d" fontSize={11} />
+                                        <Tooltip contentStyle={tooltipStyle} labelStyle={{ color: '#e4e8ee' }} itemStyle={{ color: '#a0aec0' }} />
+                                        <Line
+                                            type="monotone" dataKey={chart.y_key}
+                                            name={chart.title}
+                                            stroke="#31cab0" strokeWidth={2} dot={false}
+                                            activeDot={{ r: 4, fill: '#31cab0' }}
+                                        />
+                                        <Legend wrapperStyle={{ fontSize: '0.8rem', color: '#a0aec0' }} />
+                                    </LineChart>
+                                ) : (
+                                    <BarChart data={chart.data} margin={{ top: 5, right: 10, left: 10, bottom: 60 }}>
+                                        <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" />
+                                        <XAxis
+                                            dataKey={chart.category_key} stroke="#6b7a8d" fontSize={10}
+                                            interval={0} angle={-35} textAnchor="end"
+                                        />
+                                        <YAxis stroke="#6b7a8d" fontSize={11} />
+                                        <Tooltip contentStyle={tooltipStyle} labelStyle={{ color: '#e4e8ee' }} itemStyle={{ color: '#a0aec0' }} cursor={{ stroke: 'rgba(255,255,255,0.1)' }} />
+                                        <Bar dataKey={chart.value_key} name={chart.title} radius={[4, 4, 0, 0]}>
+                                            {chart.data.map((_, i) => (
+                                                <Cell key={i} fill={CHART_COLORS[i % CHART_COLORS.length]} />
+                                            ))}
+                                        </Bar>
+                                    </BarChart>
+                                )}
+                            </ResponsiveContainer>
+                        </div>
+                    ))}
                 </div>
-            </div>
+            )}
 
             {/* Data Quality */}
             {qualityTotals.valid + qualityTotals.rejected > 0 && (
@@ -276,9 +310,9 @@ export default function Analytics() {
                                 <strong style={{ color: 'var(--accent-teal)' }}>
                                     {((qualityTotals.valid / (qualityTotals.valid + qualityTotals.rejected)) * 100).toFixed(1)}%
                                 </strong>
-                                {' '}{quality.length === 1
-                                    ? t('analytics.acrossPipelineRuns', { count: quality.length })
-                                    : t('analytics.acrossPipelineRunsPlural', { count: quality.length })
+                                {' '}{(quality || []).length === 1
+                                    ? t('analytics.acrossPipelineRuns', { count: (quality || []).length })
+                                    : t('analytics.acrossPipelineRunsPlural', { count: (quality || []).length })
                                 }
                             </div>
                         </div>

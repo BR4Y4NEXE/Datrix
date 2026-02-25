@@ -1,11 +1,19 @@
 import pandas as pd
 import logging
-from dateutil import parser
 import re
-from dataclasses import dataclass
-from typing import Tuple, Optional
+from dateutil import parser
+from dataclasses import dataclass, field
+from typing import Optional, List, Dict
 
 logger = logging.getLogger(__name__)
+
+
+@dataclass
+class ColumnSchema:
+    name: str
+    dtype: str  # 'numeric', 'date', 'text'
+    original_name: str  # Original CSV column name
+
 
 @dataclass
 class TransformResult:
@@ -14,183 +22,169 @@ class TransformResult:
     total_processed: int
     total_valid: int
     total_rejected: int
+    schema: List[ColumnSchema] = field(default_factory=list)
 
-def clean_price(price_str: str) -> Optional[float]:
+
+def detect_column_type(series: pd.Series) -> str:
     """
-    Extracts numeric price from string.
-    Examples: "$1,200.00" -> 1200.0, "USD 500" -> 500.0
-    Returns None if parsing fails or result <= 0.
+    Detect the type of a column: 'numeric', 'date', or 'text'.
+    Uses heuristic sampling to determine the most likely type.
     """
-    if isinstance(price_str, (int, float)):
-        return float(price_str) if price_str > 0 else None
-    
-    if not isinstance(price_str, str):
+    # Drop nulls for analysis
+    clean = series.dropna().astype(str).str.strip()
+    if clean.empty:
+        return 'text'
+
+    sample = clean.head(100)
+
+    # Check numeric: try to parse as numbers (strip $, commas, etc.)
+    numeric_count = 0
+    for val in sample:
+        cleaned = re.sub(r'[^\d.\-]', '', val.replace(',', ''))
+        if cleaned:
+            try:
+                float(cleaned)
+                numeric_count += 1
+            except ValueError:
+                pass
+
+    if numeric_count / len(sample) > 0.7:
+        return 'numeric'
+
+    # Check date: try to parse as dates
+    date_count = 0
+    for val in sample:
+        try:
+            if len(val) >= 6:  # Minimum reasonable date string
+                parser.parse(val)
+                date_count += 1
+        except (ValueError, TypeError, OverflowError):
+            pass
+
+    if date_count / len(sample) > 0.7:
+        return 'date'
+
+    return 'text'
+
+
+def clean_numeric_value(val) -> Optional[float]:
+    """Clean a value that should be numeric."""
+    if isinstance(val, (int, float)):
+        return float(val) if not pd.isna(val) else None
+    if not isinstance(val, str) or not val.strip():
         return None
-
-    # Remove currency symbols and text (keep digits and dots/commas)
-    # Using regex to find the first number group
-    # Handling 1,200.00 -> 1200.00
-    cleaned = re.sub(r'[^\d.,]', '', price_str)
-    
+    cleaned = re.sub(r'[^\d.\-]', '', val.replace(',', ''))
     if not cleaned:
         return None
-
     try:
-        # Simple heuristic: if '.' and ',' are both present, 
-        # assume ',' is thousands separator if it comes before '.'
-        # or if ',' is thousands sep if it appears multiple times.
-        # Ideally, we remove ',' unless it's a decimal comma (European), 
-        # but user context implies US/Standard format "$1,200.00".
-        
-        # Standardize: remove ','
-        standardized = cleaned.replace(',', '')
-        val = float(standardized)
-        return val if val > 0 else None
+        return float(cleaned)
     except ValueError:
         return None
 
-def clean_date(date_str: str) -> Optional[str]:
-    """
-    Parses date string to YYYY-MM-DD.
-    Returns None if invalid.
-    """
-    if pd.isna(date_str) or date_str == "":
+
+def clean_date_value(val) -> Optional[str]:
+    """Clean a value that should be a date."""
+    if pd.isna(val) or str(val).strip() == '':
         return None
-        
     try:
-        dt = parser.parse(str(date_str))
+        dt = parser.parse(str(val))
         return dt.strftime('%Y-%m-%d')
-    except (ValueError, TypeError):
+    except (ValueError, TypeError, OverflowError):
         return None
 
-def clean_quantity(qty) -> int:
-    """
-    Parses quantity. Returns 0 if invalid (which will be rejected later).
-    """
-    try:
-        q = int(qty)
-        return q if q > 0 else 0
-    except (ValueError, TypeError):
-        return 0
 
-def normalize_columns(df: pd.DataFrame) -> pd.DataFrame:
-    """
-    Normalize column names to the expected schema: ID, Date, Product, Qty, Price, Store_ID.
-    Uses case-insensitive matching and common aliases.
-    """
-    # Strip whitespace from column names
-    df.columns = df.columns.str.strip()
-    
-    # Define mapping: expected_name -> list of common aliases (all lowercase for matching)
-    column_aliases = {
-        'ID': ['id', 'item_id', 'transaction_id', 'order_id', 'sale_id', 'record_id', 'no', 'num', 'number', '#'],
-        'Date': ['date', 'fecha', 'sale_date', 'order_date', 'transaction_date', 'dt', 'created_at'],
-        'Product': ['product', 'producto', 'product_name', 'product_category', 'product_id', 'item', 'item_name', 'description', 'desc', 'nombre', 'category'],
-        'Qty': ['qty', 'quantity', 'cantidad', 'units', 'count', 'amount', 'qty_sold', 'quantity_sold', 'units_sold'],
-        'Price': ['price', 'precio', 'unit_price', 'cost', 'valor', 'value', 'price_usd', 'total_revenue', 'sale_price'],
-        'Store_ID': ['store_id', 'storeid', 'store', 'tienda', 'branch', 'branch_id', 'location', 'location_id', 'sucursal', 'customer_region', 'region', 'channel'],
-    }
-    
-    rename_map = {}
-    lower_cols = {col.lower(): col for col in df.columns}
-    
-    for expected_name, aliases in column_aliases.items():
-        # Skip if column already exists with exact name
-        if expected_name in df.columns:
-            continue
-        # Try to find a match from aliases
-        for alias in aliases:
-            if alias in lower_cols:
-                rename_map[lower_cols[alias]] = expected_name
-                break
-    
-    if rename_map:
-        logger.info(f"Column mapping applied: {rename_map}")
-        df = df.rename(columns=rename_map)
-    
-    return df
+def clean_text_value(val) -> str:
+    """Clean a text value."""
+    if pd.isna(val):
+        return ''
+    return str(val).strip()
 
 
 def transform(df: pd.DataFrame) -> TransformResult:
     """
-    Applies cleaning rules and separates valid vs invalid rows.
+    Dynamically transforms any CSV DataFrame:
+    1. Detects column types (numeric, date, text)
+    2. Cleans values based on detected types
+    3. Rejects rows where ALL fields are empty/null
     """
     total = len(df)
-    
-    # Normalize column names to handle different CSV formats
-    df = normalize_columns(df)
-    
-    # Validate required columns exist
-    required = ['ID', 'Date', 'Product', 'Qty', 'Price', 'Store_ID']
-    missing = [col for col in required if col not in df.columns]
-    if missing:
-        available = list(df.columns)
-        raise KeyError(
-            f"Missing required columns after normalization: {missing}. "
-            f"Available columns: {available}. "
-            f"Please ensure your CSV has columns matching: {required}"
-        )
-    
-    # Work on a copy to avoid SettingWithCopy warnings on input df
+
+    # Strip whitespace from column names
+    df.columns = df.columns.str.strip()
+
+    # Detect schema
+    schema = []
+    for col in df.columns:
+        col_type = detect_column_type(df[col])
+        schema.append(ColumnSchema(
+            name=col.lower().replace(' ', '_'),
+            dtype=col_type,
+            original_name=col,
+        ))
+        logger.info(f"Column '{col}' detected as: {col_type}")
+
+    # Work on a copy
     processing_df = df.copy()
-    
-    # Initialize reject reason column
-    processing_df['reject_reason'] = ""
-    
-    # 1. Clean ID
-    # Rule: ID not empty
-    processing_df['clean_id'] = processing_df['ID'].astype(str).str.strip()
-    
-    # 2. Clean Date
-    processing_df['clean_date'] = processing_df['Date'].apply(clean_date)
-    
-    # 3. Clean Price
-    processing_df['clean_price'] = processing_df['Price'].apply(clean_price)
-    
-    # 4. Clean Qty
-    processing_df['clean_qty'] = processing_df['Qty'].apply(clean_quantity)
-    
-    # 5. Clean Store_ID (ensure it's valid, loosely)
-    processing_df['clean_store_id'] = processing_df['Store_ID'].fillna('').astype(str)
 
-    # Validation Logic
-    def validate_row(row):
+    # Clean each column based on its detected type
+    for col_schema in schema:
+        col = col_schema.original_name
+        if col_schema.dtype == 'numeric':
+            processing_df[col] = processing_df[col].apply(clean_numeric_value)
+        elif col_schema.dtype == 'date':
+            processing_df[col] = processing_df[col].apply(clean_date_value)
+        else:
+            processing_df[col] = processing_df[col].apply(clean_text_value)
+
+    # Validation: reject rows where ALL fields are empty/null
+    def row_is_empty(row):
+        for val in row:
+            if val is not None and val != '' and not (isinstance(val, float) and pd.isna(val)):
+                return False
+        return True
+
+    empty_mask = processing_df.apply(row_is_empty, axis=1)
+
+    # Also check for rows with critical issues
+    reject_reasons = []
+    for idx, row in processing_df.iterrows():
         reasons = []
-        if not row['clean_id'] or str(row['clean_id']).lower() == 'nan':
-            reasons.append("Missing ID")
-        if row['clean_date'] is None:
-            reasons.append("Invalid Date")
-        if row['clean_price'] is None:
-            reasons.append("Invalid Price (<=0 or parse error)")
-        if row['clean_qty'] <= 0:
-            reasons.append("Invalid Quantity (<=0)")
-        
-        return "; ".join(reasons)
+        if row_is_empty(row):
+            reasons.append("All fields empty")
 
-    processing_df['reject_reason'] = processing_df.apply(validate_row, axis=1)
-    
-    # Split
-    valid_mask = processing_df['reject_reason'] == ""
-    
-    # Finalize Valid DF
-    # Select only clean columns and rename them back to standard names if needed,
-    # or keep them as map to DB columns.
-    # Let's map to DB schema: id, date, product, qty, price, store_id
-    
-    valid_df = processing_df.loc[valid_mask].copy()
-    valid_df = valid_df[['clean_id', 'clean_date', 'Product', 'clean_qty', 'clean_price', 'clean_store_id']]
-    valid_df.columns = ['id', 'date', 'product', 'qty', 'price', 'store_id']
-    
-    # Finalize Rejected DF
-    # Keep original data + reason
+        # Count how many fields have null/empty values
+        null_count = sum(
+            1 for val in row
+            if val is None or val == '' or (isinstance(val, float) and pd.isna(val))
+        )
+        total_cols = len(row)
+        if null_count > 0 and null_count >= total_cols * 0.7 and not row_is_empty(row):
+            reasons.append(f"Mostly empty ({null_count}/{total_cols} fields null)")
+
+        reject_reasons.append('; '.join(reasons))
+
+    processing_df['reject_reason'] = reject_reasons
+
+    # Split valid vs rejected
+    valid_mask = processing_df['reject_reason'] == ''
+
+    valid_df = processing_df.loc[valid_mask].drop(columns=['reject_reason']).copy()
     rejected_df = processing_df.loc[~valid_mask].copy()
-    # Keep original columns for debugging + reason
-    rejected_df = rejected_df[['ID', 'Date', 'Product', 'Qty', 'Price', 'Store_ID', 'reject_reason']]
-    
+
+    # Normalize column names in valid_df to lowercase with underscores
+    rename_map = {s.original_name: s.name for s in schema}
+    valid_df = valid_df.rename(columns=rename_map)
+
+    logger.info(
+        f"Transform complete: {len(valid_df)} valid, {len(rejected_df)} rejected "
+        f"out of {total} total rows"
+    )
+
     return TransformResult(
         valid_df=valid_df,
         rejected_df=rejected_df,
         total_processed=total,
         total_valid=len(valid_df),
-        total_rejected=len(rejected_df)
+        total_rejected=len(rejected_df),
+        schema=schema,
     )

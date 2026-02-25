@@ -59,6 +59,10 @@ export async function getAnalytics() {
     return request('/data/analytics');
 }
 
+export async function getSchema() {
+    return request('/data/schema');
+}
+
 export async function exportCSV() {
     const response = await fetch(`${API_BASE}/data/export`);
     if (!response.ok) throw new Error('Export failed');
@@ -66,9 +70,13 @@ export async function exportCSV() {
     const url = window.URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = 'datrix_sales_export.csv';
+    a.download = 'datrix_export.csv';
     document.body.appendChild(a);
     a.click();
     a.remove();
     window.URL.revokeObjectURL(url);
+}
+
+export async function resetData() {
+    return request('/data/reset', { method: 'DELETE' });
 }

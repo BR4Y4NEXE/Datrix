@@ -7,18 +7,19 @@
   <img src="https://img.shields.io/badge/WebSocket-010101?style=for-the-badge&logo=socket.io&logoColor=white" />
 </p>
 
-# ⚡ FluxCLI — Sales ETL Pipeline & Real-Time Dashboard
+# ⚡ FluxCLI — Dynamic ETL Pipeline & Real-Time Dashboard
 
-> **A CLI-first ETL pipeline that evolved into a full-stack web platform** — featuring real-time pipeline monitoring via WebSocket, interactive analytics dashboards, and bilingual i18n support (EN/ES).
+> **A CLI-first ETL pipeline that evolved into a full-stack web platform** — now supporting **any CSV schema** with automatic column detection, real-time pipeline monitoring via WebSocket, interactive analytics dashboards, and bilingual i18n support (EN/ES).
 
 ---
 
 ## 🎯 Purpose
 
-FluxCLI automates the daily processing of sales data through a robust **Extract → Transform → Load → Notify** pipeline. It was originally built as a Python CLI tool, then migrated to a modern web platform to provide:
+FluxCLI automates the processing of CSV data through a robust **Extract → Transform → Load → Notify** pipeline. Originally built as a Python CLI tool for sales data, it was migrated to a modern web platform and later generalized to accept **any CSV schema dynamically**. It provides:
 
+- **Dynamic schema detection** — automatically identifies column types (`numeric`, `date`, `text`) from any CSV
 - **Real-time visibility** into ETL execution via WebSocket-streamed logs
-- **Interactive dashboards** with sales analytics, data quality metrics, and execution history
+- **Interactive dashboards** with data analytics, quality metrics, and execution history
 - **Data governance** through a quarantine system that isolates invalid records for review
 - **Automated notifications** via Email and Slack upon pipeline completion
 
@@ -32,18 +33,25 @@ FluxCLI automates the daily processing of sales data through a robust **Extract 
 │                                 │      │                                  │
 │  Dashboard ─ Analytics          │ HTTP │  /pipeline/run  → PipelineRunner │
 │  DataExplorer ─ History   ◄─────┼──────┼► /data/*        → SQLite queries │
-│  Quarantine ─ Notifications     │  WS  │  /ws/{run_id}  → Live logs       │
-│                                 │      │                                  │
-│  i18n (EN/ES) ─ Recharts        │      │  Services:                       │
-└─────────────────────────────────┘      │   ├─ pipeline_runner.py          │
-                                         │   ├─ log_handler.py (WS bridge)  │
-                                         │   └─ connection_manager.py       │
+│  Quarantine                     │  WS  │  /data/schema   → Column types   │
+│                                 │      │  /data/export   → CSV download   │
+│  i18n (EN/ES) ─ Recharts        │      │  /data/reset    → Full cleanup   │
+│  Datrix Logo                    │      │  /ws/{run_id}   → Live logs      │
+└─────────────────────────────────┘      │                                  │
+                                         │  Services:                       │
+                                         │   ├─ pipeline_runner.py          │
+                                         │   └─ log_handler.py (WS bridge)  │
                                          │                                  │
                                          │  Core ETL:                       │
                                          │   ├─ extractor.py                │
-                                         │   ├─ transformer.py              │
-                                         │   ├─ loader.py (SQLite upsert)   │
+                                         │   ├─ transformer.py (dynamic)    │
+                                         │   ├─ loader.py (JSON datasets)   │
                                          │   └─ notifier.py (Email/Slack)   │
+                                         │                                  │
+                                         │  Data Layer:                     │
+                                         │   ├─ datasets (JSON rows)        │
+                                         │   ├─ dataset_schema (col types)  │
+                                         │   └─ pipeline_runs (history)     │
                                          └──────────────────────────────────┘
 ```
 
@@ -51,7 +59,7 @@ FluxCLI automates the daily processing of sales data through a robust **Extract 
 
 ## 🔥 The Migration Challenge
 
-This project wasn't just "add a frontend." It was a **full architectural transformation** from a synchronous CLI script to an async, event-driven web platform. Here's what made it hard:
+This project wasn't just "add a frontend." It was a **full architectural transformation** from a synchronous CLI script to an async, event-driven web platform — and later, from a fixed-schema pipeline to a **fully dynamic ETL engine**. Here's what made it hard:
 
 ### 🧩 Synchronous → Asynchronous Execution
 
@@ -63,11 +71,15 @@ The CLI printed logs to the terminal. The web dashboard needed them in real time
 
 ### 📁 File Paths → HTTP Uploads
 
-The CLI receives `--file path/to/file.csv`. Browsers don't work that way. **Solution:** Implemented `multipart/form-data` upload with an auto-detect mode that scans for today's sales file in the `data/` directory.
+The CLI receives `--file path/to/file.csv`. Browsers don't work that way. **Solution:** Implemented `multipart/form-data` upload with an auto-detect mode that scans for today's file in the `data/` directory.
 
 ### 🗃️ Ephemeral → Persistent State
 
 The CLI had no memory — each run was fire-and-forget. The dashboard needs execution history, metrics, and trends. **Solution:** Designed a `pipeline_runs` table in SQLite tracking `total_read`, `total_valid`, `total_rejected`, `db_inserts`, `db_updates`, `duration`, and `status`.
+
+### 🔄 Fixed Schema → Dynamic Schema
+
+The original pipeline was hardcoded for a 6-column sales CSV (`id`, `date`, `product`, `qty`, `price`, `store_id`). **Solution:** Rewrote the transformer with `ColumnSchema` and `TransformResult` dataclasses that auto-detect column types (`numeric`, `date`, `text`). The loader now stores data as JSON rows in a generic `datasets` table with a companion `dataset_schema` table — enabling any CSV to be processed without code changes.
 
 ### 🐼 Pandas 3.0 Breaking Change
 
@@ -102,15 +114,18 @@ The first frontend used glassmorphism (blur, gradients, heavy shadows). It didn'
 
 | Feature | Description |
 |---------|-------------|
+| **Dynamic Schema** | Automatically detects column types (`numeric`, `date`, `text`) from any CSV — no hardcoded schemas |
 | **ETL Pipeline** | Extract → Transform → Load with data validation, deduplication, and upsert strategies |
 | **Real-Time Logs** | WebSocket-powered live log streaming during pipeline execution |
 | **Dashboard** | KPI cards, execution timeline, and quick-action controls |
-| **Analytics** | Sales trends, category breakdown, and monthly comparisons via Recharts |
-| **Data Explorer** | Browse, search, and paginate loaded sales records |
+| **Analytics** | Data trends, category breakdown, and comparisons via Recharts |
+| **Data Explorer** | Browse, search, and paginate loaded records with dynamic columns |
+| **CSV Export** | Export processed data as CSV directly from the Data Explorer |
 | **Quarantine** | Review invalid/rejected rows with reason codes |
 | **History** | Full execution log with duration, status, and row-level metrics |
-| **Notifications** | Email and Slack reports on pipeline completion |
+| **Database Reset** | One-click cleanup of all data, run history, and quarantine files |
 | **i18n** | Bilingual support (English / Español) with persistent language selection |
+| **Smart Toggle** | Auto-detect test data toggle disables automatically when a real CSV is uploaded |
 | **CLI Mode** | Original command-line interface still fully functional |
 
 ---
@@ -152,14 +167,14 @@ Open **http://localhost:5173** — the Vite dev server proxies API calls to the 
 ### 4. CLI Mode (Optional)
 
 ```bash
-# Auto-detect today's sales file
+# Auto-detect today's file
 python etl.py --auto
 
 # Dry run (no DB writes, no notifications)
 python etl.py --auto --dry-run
 
 # Process a specific file
-python etl.py --file data/input/sales_20240119.csv
+python etl.py --file data/input/my_data.csv
 ```
 
 ---
@@ -170,37 +185,41 @@ python etl.py --file data/input/sales_20240119.csv
 FluxCLI/
 ├── etl.py                    # Original CLI entry point
 ├── mock_data_gen.py          # Test data generator
+├── Procfile                  # Deployment configuration
+├── .python-version           # Python version pinning
 ├── backend/
 │   ├── main.py               # FastAPI application
-│   ├── database.py            # SQLite connection + pipeline_runs table
-│   ├── models.py              # Pydantic schemas
-│   ├── routes/                # API endpoints (pipeline, data, stats)
+│   ├── database.py           # SQLite: datasets, dataset_schema, pipeline_runs
+│   ├── models.py             # Pydantic schemas (ColumnSchemaResponse, PaginatedRecords, etc.)
+│   ├── routes/               # API endpoints (pipeline, data, stats)
 │   └── services/
 │       ├── pipeline_runner.py # Async orchestration layer
-│       ├── log_handler.py     # WebSocket log bridge
-│       └── connection_manager.py
+│       └── log_handler.py    # WebSocket log bridge
 ├── frontend/
 │   └── src/
-│       ├── App.jsx            # Router + sidebar layout
+│       ├── App.jsx           # Router + sidebar layout
+│       ├── img/              # Datrix logo (datrix-logo-v3.svg)
 │       ├── pages/
 │       │   ├── Dashboard.jsx
 │       │   ├── Analytics.jsx
 │       │   ├── DataExplorer.jsx
 │       │   ├── History.jsx
-│       │   ├── Quarantine.jsx
-│       │   └── Notifications.jsx
-│       ├── hooks/             # Custom React hooks
-│       ├── i18n/              # EN/ES translation files
-│       └── services/          # API client layer
-├── src/                       # Core ETL modules
+│       │   └── Quarantine.jsx
+│       ├── hooks/            # Custom React hooks (useWebSocket)
+│       ├── i18n/
+│       │   ├── LanguageContext.jsx  # React Context for i18n
+│       │   ├── en.json             # English translations
+│       │   └── es.json             # Spanish translations
+│       └── services/         # API client layer (api.js)
+├── src/                      # Core ETL modules
 │   ├── extractor.py
-│   ├── transformer.py
-│   ├── loader.py
+│   ├── transformer.py        # Dynamic column detection (ColumnSchema, TransformResult)
+│   ├── loader.py             # JSON-based dataset storage
 │   └── notifier.py
-├── config/                    # Environment configuration
-├── data/                      # Input files + quarantine reports
-├── logs/                      # Execution logs
-└── tests/                     # Unit tests
+├── config/                   # Environment configuration
+├── data/                     # Input files + quarantine reports
+├── logs/                     # Execution logs
+└── tests/                    # Unit tests
 ```
 
 ---
@@ -209,7 +228,7 @@ FluxCLI/
 
 | Layer | Technology |
 |-------|-----------|
-| **ETL Core** | Python, Pandas, SQLite |
+| **ETL Core** | Python, Pandas, SQLite, dataclasses, python-dateutil |
 | **Backend** | FastAPI, Uvicorn, WebSocket |
 | **Frontend** | React 19, Vite 6, React Router 7 |
 | **Charts** | Recharts |

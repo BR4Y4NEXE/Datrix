@@ -1,9 +1,9 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 import {
     Upload, Play, FileText, CheckCircle, XCircle,
-    Clock, Database, AlertTriangle, Zap, BarChart3
+    Clock, Database, AlertTriangle, Zap, BarChart3, Trash2
 } from 'lucide-react';
-import { launchPipeline, getRuns } from '../services/api';
+import { launchPipeline, getRuns, resetData } from '../services/api';
 import { useWebSocket } from '../hooks/useWebSocket';
 import { useTranslation } from '../i18n/LanguageContext';
 
@@ -17,6 +17,7 @@ export default function Dashboard() {
     const [lastRun, setLastRun] = useState(null);
     const [error, setError] = useState('');
     const [dragOver, setDragOver] = useState(false);
+    const [resetting, setResetting] = useState(false);
     const fileInputRef = useRef(null);
     const logContainerRef = useRef(null);
 
@@ -87,6 +88,24 @@ export default function Dashboard() {
         if (f) {
             setFile(f);
             setAutoDetect(false);
+        }
+    };
+
+    const handleReset = async () => {
+        const msg = t('dashboard.resetConfirm') || 'Are you sure? This will delete ALL data, run history, and quarantine files.';
+        if (!window.confirm(msg)) return;
+        setResetting(true);
+        try {
+            await resetData();
+            setLastRun(null);
+            clearLogs();
+            setFile(null);
+            setCurrentRunId(null);
+            setError('');
+        } catch (e) {
+            setError(e.message);
+        } finally {
+            setResetting(false);
         }
     };
 
@@ -171,10 +190,10 @@ export default function Dashboard() {
 
                     {/* Options */}
                     <div style={{ marginTop: 20 }}>
-                        <div className="toggle-group">
+                        <div className={`toggle-group ${file ? 'disabled' : ''}`}>
                             <div
-                                className={`toggle ${autoDetect ? 'active' : ''}`}
-                                onClick={() => { setAutoDetect(!autoDetect); if (!autoDetect) setFile(null); }}
+                                className={`toggle ${autoDetect ? 'active' : ''} ${file ? 'disabled' : ''}`}
+                                onClick={() => { if (file) return; setAutoDetect(!autoDetect); if (!autoDetect) setFile(null); }}
                             >
                                 <div className="toggle-knob"></div>
                             </div>
@@ -219,6 +238,22 @@ export default function Dashboard() {
                             {t('dashboard.dryRunWarning')}
                         </div>
                     )}
+
+                    {/* Reset Database Button */}
+                    <button
+                        className="btn btn-secondary"
+                        style={{
+                            marginTop: 12, width: '100%',
+                            color: 'var(--accent-red)', borderColor: 'rgba(252,92,101,0.3)',
+                            fontSize: '0.8rem'
+                        }}
+                        onClick={handleReset}
+                        disabled={resetting || isRunning}
+                    >
+                        <Trash2 size={14} /> {resetting
+                            ? (t('dashboard.resetting') || 'Clearing...')
+                            : (t('dashboard.resetData') || 'Reset All Data')}
+                    </button>
                 </div>
 
                 {/* Live Log Viewer */}

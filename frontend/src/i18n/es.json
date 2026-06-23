@@ -108,7 +108,12 @@
         "rejectedRecords": "Registros Rechazados",
         "passRate": "Tasa de aprobación:",
         "acrossPipelineRuns": "en {count} ejecución de pipeline",
-        "acrossPipelineRunsPlural": "en {count} ejecuciones de pipeline"
+        "acrossPipelineRunsPlural": "en {count} ejecuciones de pipeline",
+        "completenessTitle": "Completitud de Datos",
+        "completenessScore": "Global",
+        "column": "Columna",
+        "complete": "Completo",
+        "missing": "Faltantes"
     },
     "notifications": {
         "title": "🔔 Notificaciones",

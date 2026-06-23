@@ -5,22 +5,22 @@ import {
 } from 'recharts';
 import {
     BarChart3, Download, TrendingUp, Hash,
-    Layers, PieChart as PieIcon, RefreshCw
+    Layers, PieChart as PieIcon, RefreshCw, CheckCircle
 } from 'lucide-react';
 import { getAnalytics, exportCSV } from '../services/api';
 import { useTranslation } from '../i18n/LanguageContext';
 
 const CHART_COLORS = [
-    '#31cab0', '#a78bfa', '#f7b731', '#fc5c65',
+    '#6366f1', '#a78bfa', '#f7b731', '#f87171',
     '#fd9644', '#45aaf2', '#26de81', '#e056a0',
     '#f7d794', '#778ca3'
 ];
 
 const tooltipStyle = {
-    backgroundColor: '#1e3148',
-    border: '1px solid rgba(255,255,255,0.1)',
+    backgroundColor: '#18181b',
+    border: '1px solid #27272a',
     borderRadius: 6,
-    color: '#e4e8ee',
+    color: '#fafafa',
     fontSize: '0.8rem',
 };
 
@@ -85,7 +85,7 @@ export default function Analytics() {
         );
     }
 
-    const { charts, summary, quality } = data;
+    const { charts, summary, quality, completeness } = data;
     const numericCols = summary.numeric_columns || [];
     const textCols = summary.text_columns || [];
 
@@ -98,8 +98,8 @@ export default function Analytics() {
         { valid: 0, rejected: 0 }
     );
     const qualityPie = [
-        { name: t('analytics.validRecords'), value: qualityTotals.valid, color: '#31cab0' },
-        { name: t('analytics.rejectedRecords'), value: qualityTotals.rejected, color: '#fc5c65' },
+        { name: t('analytics.validRecords'), value: qualityTotals.valid, color: '#34d399' },
+        { name: t('analytics.rejectedRecords'), value: qualityTotals.rejected, color: '#f87171' },
     ];
 
     // Icons for summary cards
@@ -188,6 +188,48 @@ export default function Analytics() {
                 </div>
             )}
 
+            {/* Data Completeness (governance: report-only) */}
+            {completeness && completeness.columns.length > 0 && (
+                <div className="card" style={{ marginBottom: 20 }}>
+                    <div className="card-title">
+                        <CheckCircle size={16} /> {t('analytics.completenessTitle')}
+                        <span className="card-subtitle" style={{ marginLeft: 'auto' }}>
+                            {t('analytics.completenessScore')}: <strong style={{ color: completeness.score < 100 ? 'var(--accent-amber)' : 'var(--accent-green)' }}>{completeness.score}%</strong>
+                        </span>
+                    </div>
+                    <div className="data-table-wrapper">
+                        <table className="data-table">
+                            <thead>
+                                <tr>
+                                    <th>{t('analytics.column')}</th>
+                                    <th>{t('analytics.complete')}</th>
+                                    <th>{t('analytics.missing')}</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {completeness.columns.map((c) => (
+                                    <tr key={c.original_name}
+                                        style={c.missing > 0 ? { background: 'rgba(252,92,101,0.06)' } : undefined}>
+                                        <td style={{ fontWeight: 600 }}>{c.original_name}</td>
+                                        <td>
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                                                <div style={{ flex: 1, height: 6, borderRadius: 3, background: 'rgba(255,255,255,0.08)', overflow: 'hidden', minWidth: 80 }}>
+                                                    <div style={{ width: `${c.pct_complete}%`, height: '100%', borderRadius: 3, background: c.pct_complete < 100 ? 'var(--accent-amber)' : 'var(--accent-green)' }} />
+                                                </div>
+                                                <span style={{ color: c.pct_complete < 100 ? 'var(--accent-amber)' : 'var(--accent-green)', minWidth: 48, textAlign: 'right' }}>
+                                                    {c.pct_complete}%
+                                                </span>
+                                            </div>
+                                        </td>
+                                        <td>{c.missing > 0 ? `${c.missing.toLocaleString()} / ${c.total.toLocaleString()}` : '—'}</td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            )}
+
             {/* Text column unique values */}
             {textCols.length > 0 && (
                 <div className="card" style={{ marginBottom: 20 }}>
@@ -231,28 +273,28 @@ export default function Analytics() {
                                     <LineChart data={chart.data} margin={{ top: 5, right: 20, left: 10, bottom: 5 }}>
                                         <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" />
                                         <XAxis
-                                            dataKey={chart.x_key} stroke="#6b7a8d" fontSize={11}
+                                            dataKey={chart.x_key} stroke="#71717a" fontSize={11}
                                             tickFormatter={(v) => v?.slice(5) || v}
                                         />
-                                        <YAxis stroke="#6b7a8d" fontSize={11} />
-                                        <Tooltip contentStyle={tooltipStyle} labelStyle={{ color: '#e4e8ee' }} itemStyle={{ color: '#a0aec0' }} />
+                                        <YAxis stroke="#71717a" fontSize={11} />
+                                        <Tooltip contentStyle={tooltipStyle} labelStyle={{ color: '#fafafa' }} itemStyle={{ color: '#a1a1aa' }} />
                                         <Line
                                             type="monotone" dataKey={chart.y_key}
                                             name={chart.title}
-                                            stroke="#31cab0" strokeWidth={2} dot={false}
-                                            activeDot={{ r: 4, fill: '#31cab0' }}
+                                            stroke="#6366f1" strokeWidth={2} dot={false}
+                                            activeDot={{ r: 4, fill: '#6366f1' }}
                                         />
-                                        <Legend wrapperStyle={{ fontSize: '0.8rem', color: '#a0aec0' }} />
+                                        <Legend wrapperStyle={{ fontSize: '0.8rem', color: '#a1a1aa' }} />
                                     </LineChart>
                                 ) : (
                                     <BarChart data={chart.data} margin={{ top: 5, right: 10, left: 10, bottom: 60 }}>
                                         <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" />
                                         <XAxis
-                                            dataKey={chart.category_key} stroke="#6b7a8d" fontSize={10}
+                                            dataKey={chart.category_key} stroke="#71717a" fontSize={10}
                                             interval={0} angle={-35} textAnchor="end"
                                         />
-                                        <YAxis stroke="#6b7a8d" fontSize={11} />
-                                        <Tooltip contentStyle={tooltipStyle} labelStyle={{ color: '#e4e8ee' }} itemStyle={{ color: '#a0aec0' }} cursor={{ stroke: 'rgba(255,255,255,0.1)' }} />
+                                        <YAxis stroke="#71717a" fontSize={11} />
+                                        <Tooltip contentStyle={tooltipStyle} labelStyle={{ color: '#fafafa' }} itemStyle={{ color: '#a1a1aa' }} cursor={{ stroke: 'rgba(255,255,255,0.1)' }} />
                                         <Bar dataKey={chart.value_key} name={chart.title} radius={[4, 4, 0, 0]}>
                                             {chart.data.map((_, i) => (
                                                 <Cell key={i} fill={CHART_COLORS[i % CHART_COLORS.length]} />
@@ -282,20 +324,20 @@ export default function Analytics() {
                                         <Cell key={i} fill={entry.color} />
                                     ))}
                                 </Pie>
-                                <Tooltip contentStyle={tooltipStyle} labelStyle={{ color: '#e4e8ee' }} itemStyle={{ color: '#a0aec0' }} />
+                                <Tooltip contentStyle={tooltipStyle} labelStyle={{ color: '#fafafa' }} itemStyle={{ color: '#a1a1aa' }} />
                             </PieChart>
                         </ResponsiveContainer>
                         <div style={{ flex: 1 }}>
                             <div style={{ marginBottom: 16 }}>
                                 <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
-                                    <div style={{ width: 12, height: 12, borderRadius: 3, background: '#31cab0' }}></div>
+                                    <div style={{ width: 12, height: 12, borderRadius: 3, background: '#34d399' }}></div>
                                     <span style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>{t('analytics.validRecords')}</span>
                                     <strong style={{ marginLeft: 'auto', color: 'var(--accent-teal)' }}>
                                         {qualityTotals.valid.toLocaleString()}
                                     </strong>
                                 </div>
                                 <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                                    <div style={{ width: 12, height: 12, borderRadius: 3, background: '#fc5c65' }}></div>
+                                    <div style={{ width: 12, height: 12, borderRadius: 3, background: '#f87171' }}></div>
                                     <span style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>{t('analytics.rejectedRecords')}</span>
                                     <strong style={{ marginLeft: 'auto', color: 'var(--accent-red)' }}>
                                         {qualityTotals.rejected.toLocaleString()}

@@ -3,44 +3,44 @@
    ======================================== */
 
 :root {
-  /* Colors — Flatkit dark palette */
-  --bg-primary: #192a3e;
-  --bg-secondary: #1e3148;
-  --bg-card: #243447;
-  --bg-card-hover: #2a3d52;
-  --bg-sidebar: #1a2332;
-  --bg-input: rgba(255, 255, 255, 0.06);
-  --bg-terminal: #151f2b;
-  --bg-topbar: #1e3148;
+  /* Colors — Zinc/Indigo minimalist palette */
+  --bg-primary: #09090b;
+  --bg-secondary: #18181b;
+  --bg-card: #18181b;
+  --bg-card-hover: #1f1f23;
+  --bg-sidebar: #09090b;
+  --bg-input: #09090b;
+  --bg-terminal: #121215;
+  --bg-topbar: #18181b;
 
-  --border-subtle: rgba(255, 255, 255, 0.06);
-  --border-accent: rgba(255, 255, 255, 0.1);
-  --border-glow: rgba(255, 255, 255, 0.08);
+  --border-subtle: #27272a;
+  --border-accent: #3f3f46;
+  --border-glow: #27272a;
 
-  --text-primary: #e4e8ee;
-  --text-secondary: #a0aec0;
-  --text-muted: #6b7a8d;
+  --text-primary: #fafafa;
+  --text-secondary: #a1a1aa;
+  --text-muted: #71717a;
 
-  --accent-teal: #31cab0;
+  --accent-teal: #6366f1;
   --accent-purple: #a78bfa;
   --accent-blue: #6366f1;
-  --accent-green: #31cab0;
-  --accent-red: #fc5c65;
+  --accent-green: #34d399;
+  --accent-red: #f87171;
   --accent-amber: #f7b731;
   --accent-pink: #e056a0;
   --accent-orange: #fd9644;
   --accent-gold: #f7d794;
-  --accent-cyan: #31cab0;
+  --accent-cyan: #6366f1;
 
-  --gradient-primary: linear-gradient(135deg, #31cab0, #26a69a);
-  --gradient-sidebar: linear-gradient(180deg, #1a2332 0%, #192a3e 100%);
+  --gradient-primary: linear-gradient(135deg, #6366f1, #4f46e5);
+  --gradient-sidebar: linear-gradient(180deg, #09090b 0%, #09090b 100%);
   --gradient-card: none;
-  --gradient-success: linear-gradient(135deg, #31cab0, #26a69a);
-  --gradient-danger: linear-gradient(135deg, #fc5c65, #e056a0);
+  --gradient-success: linear-gradient(135deg, #34d399, #10b981);
+  --gradient-danger: linear-gradient(135deg, #f87171, #ef4444);
 
   /* No glass — flat design */
-  --glass-bg: #243447;
-  --glass-border: rgba(255, 255, 255, 0.06);
+  --glass-bg: #18181b;
+  --glass-border: #27272a;
   --glass-blur: none;
 
   /* Shadows — subtle */
@@ -186,9 +186,9 @@ a:hover {
 }
 
 .nav-link.active {
-  background: rgba(49, 202, 176, 0.08);
-  color: var(--accent-teal);
-  border-left: 3px solid var(--accent-teal);
+  background: var(--bg-card);
+  color: var(--text-primary);
+  border-left: 3px solid var(--accent-blue);
   padding-left: 9px;
 }
 
@@ -222,7 +222,7 @@ a:hover {
   height: 8px;
   border-radius: 50%;
   background: var(--accent-green);
-  box-shadow: 0 0 6px rgba(49, 202, 176, 0.4);
+  box-shadow: 0 0 6px rgba(52, 211, 153, 0.4);
   animation: pulse-dot 2s ease-in-out infinite;
 }
 
@@ -319,7 +319,7 @@ a:hover {
   background: var(--bg-card);
   border: 1px solid var(--border-subtle);
   border-radius: var(--radius-lg);
-  padding: 20px;
+  padding: 24px;
   transition: all var(--transition-base);
   position: relative;
 }
@@ -392,12 +392,12 @@ a:hover {
 }
 
 .metric-card .metric-icon.cyan {
-  background: rgba(49, 202, 176, 0.15);
-  color: var(--accent-teal);
+  background: rgba(99, 102, 241, 0.15);
+  color: var(--accent-blue);
 }
 
 .metric-card .metric-icon.green {
-  background: rgba(49, 202, 176, 0.15);
+  background: rgba(52, 211, 153, 0.15);
   color: var(--accent-green);
 }
 
@@ -468,7 +468,7 @@ a:hover {
 }
 
 .btn-primary:hover:not(:disabled) {
-  background: #28b89e;
+  background: #4f46e5;
   transform: translateY(-1px);
 }
 
@@ -484,9 +484,13 @@ a:hover {
 }
 
 .btn-danger {
-  background: rgba(252, 92, 101, 0.15);
+  background: transparent;
   color: var(--accent-red);
-  border: 1px solid rgba(252, 92, 101, 0.3);
+  border: 1px solid var(--accent-red);
+}
+
+.btn-danger:hover:not(:disabled) {
+  background: rgba(127, 29, 29, 0.2);
 }
 
 .btn-sm {
@@ -496,7 +500,7 @@ a:hover {
 
 /* ========== Upload Area ========== */
 .upload-zone {
-  border: 2px dashed rgba(255, 255, 255, 0.12);
+  border: 2px dashed #3f3f46;
   border-radius: var(--radius-lg);
   padding: 36px 24px;
   text-align: center;
@@ -507,8 +511,8 @@ a:hover {
 
 .upload-zone:hover,
 .upload-zone.drag-over {
-  border-color: var(--accent-teal);
-  background: rgba(49, 202, 176, 0.04);
+  border-color: var(--accent-blue);
+  background: rgba(99, 102, 241, 0.06);
 }
 
 .upload-zone .upload-icon {
@@ -543,7 +547,7 @@ a:hover {
   position: relative;
   width: 40px;
   height: 22px;
-  background: rgba(255, 255, 255, 0.1);
+  background: var(--border-subtle);
   border-radius: 11px;
   cursor: pointer;
   border: none;
@@ -698,7 +702,7 @@ a:hover {
 }
 
 .badge.success {
-  background: rgba(49, 202, 176, 0.15);
+  background: rgba(52, 211, 153, 0.15);
   color: var(--accent-green);
 }
 
@@ -768,12 +772,12 @@ a:hover {
 
 .form-input:focus,
 .form-select:focus {
-  border-color: var(--accent-teal);
-  box-shadow: 0 0 0 2px rgba(167, 139, 250, 0.12);
+  border-color: var(--accent-blue);
+  box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.2);
 }
 
 .form-input::placeholder {
-  color: var(--text-muted);
+  color: var(--text-secondary);
 }
 
 .filters-bar {
@@ -911,7 +915,7 @@ a:hover {
 }
 
 .notif-icon.enabled {
-  background: rgba(49, 202, 176, 0.15);
+  background: rgba(52, 211, 153, 0.15);
   color: var(--accent-green);
 }
 
@@ -934,15 +938,16 @@ a:hover {
 /* ========== Empty State ========== */
 .empty-state {
   text-align: center;
-  padding: 50px 20px;
+  padding: 72px 20px;
   color: var(--text-muted);
 }
 
 .empty-state svg {
-  width: 44px;
-  height: 44px;
-  margin-bottom: 14px;
-  opacity: 0.3;
+  width: 22px;
+  height: 22px;
+  margin-bottom: 18px;
+  color: #52525b;
+  opacity: 1;
 }
 
 .empty-state h3 {

@@ -108,7 +108,12 @@
         "rejectedRecords": "Rejected Records",
         "passRate": "Pass rate:",
         "acrossPipelineRuns": "across {count} pipeline run",
-        "acrossPipelineRunsPlural": "across {count} pipeline runs"
+        "acrossPipelineRunsPlural": "across {count} pipeline runs",
+        "completenessTitle": "Data Completeness",
+        "completenessScore": "Overall",
+        "column": "Column",
+        "complete": "Complete",
+        "missing": "Missing"
     },
     "notifications": {
         "title": "🔔 Notifications",

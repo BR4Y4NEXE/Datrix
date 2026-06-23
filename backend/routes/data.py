@@ -262,6 +262,28 @@ async def get_analytics(run_id: Optional[str] = None):
                 })
         summary["text_columns"] = text_summaries
 
+        # Data completeness (governance: report-only, never rejects/quarantines)
+        completeness_cols = []
+        for s in schema:
+            col = s["column_name"]
+            if col in df.columns:
+                ser = df[col]
+                missing = ser.isna() | (ser.astype(str).str.strip() == "")
+                n_missing = int(missing.sum())
+                completeness_cols.append({
+                    "original_name": s["original_name"],
+                    "missing": n_missing,
+                    "total": total_records,
+                    "pct_complete": round((total_records - n_missing) / total_records * 100, 1),
+                })
+        completeness = {
+            "columns": completeness_cols,
+            "score": round(
+                sum(c["total"] - c["missing"] for c in completeness_cols)
+                / (total_records * len(completeness_cols)) * 100, 1
+            ) if completeness_cols else 100.0,
+        }
+
         # Generate charts
         charts = []
 
@@ -350,6 +372,7 @@ async def get_analytics(run_id: Optional[str] = None):
         "charts": charts,
         "summary": summary,
         "schema": schema,
+        "completeness": completeness,
         "quality": [
             {"id": r["id"], "file_name": r["file_name"], "status": r["status"],
              "total_read": r["total_read"], "total_valid": r["total_valid"],

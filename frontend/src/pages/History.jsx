@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { History, Clock, RefreshCw } from 'lucide-react';
 import { getRuns } from '../services/api';
+import { getSessionRunIds } from '../services/runState';
 import { useTranslation } from '../i18n/LanguageContext';
 
 export default function HistoryPage() {
@@ -12,7 +13,9 @@ export default function HistoryPage() {
         setLoading(true);
         try {
             const data = await getRuns(50, 0);
-            setRuns(data);
+            // Only show the demo run + runs this browser session created.
+            const visible = new Set(['demo', ...getSessionRunIds()]);
+            setRuns(data.filter(r => visible.has(r.id)));
         } catch (e) {
             console.error(e);
         } finally {

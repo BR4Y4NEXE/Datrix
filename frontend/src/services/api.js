@@ -1,3 +1,5 @@
+import { getActiveRunId } from './runState';
+
 const API_BASE = import.meta.env.VITE_API_URL || '';
 
 async function request(url, options = {}) {
@@ -39,7 +41,8 @@ export async function getRun(runId) {
 
 export async function getRecords(params = {}) {
     const searchParams = new URLSearchParams();
-    Object.entries(params).forEach(([key, val]) => {
+    const withRun = { run_id: getActiveRunId(), ...params };
+    Object.entries(withRun).forEach(([key, val]) => {
         if (val !== undefined && val !== null && val !== '') {
             searchParams.set(key, val);
         }
@@ -56,25 +59,34 @@ export async function getQuarantineDetail(filename) {
 }
 
 export async function getAnalytics() {
-    return request('/data/analytics');
+    return request(`/data/analytics?run_id=${encodeURIComponent(getActiveRunId())}`);
 }
 
 export async function getSchema() {
-    return request('/data/schema');
+    return request(`/data/schema?run_id=${encodeURIComponent(getActiveRunId())}`);
 }
 
-export async function exportCSV() {
-    const response = await fetch(`${API_BASE}/data/export`);
+async function downloadExport(format, filename) {
+    const runId = encodeURIComponent(getActiveRunId());
+    const response = await fetch(`${API_BASE}/data/export?run_id=${runId}&format=${format}`);
     if (!response.ok) throw new Error('Export failed');
     const blob = await response.blob();
     const url = window.URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = 'datrix_export.csv';
+    a.download = filename;
     document.body.appendChild(a);
     a.click();
     a.remove();
     window.URL.revokeObjectURL(url);
+}
+
+export async function exportCSV() {
+    return downloadExport('csv', 'datrix_export.csv');
+}
+
+export async function exportExcel() {
+    return downloadExport('xlsx', 'datrix_export.xlsx');
 }
 
 export async function resetData() {

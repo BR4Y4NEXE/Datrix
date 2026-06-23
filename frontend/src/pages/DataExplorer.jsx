@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
-import { Search, Database, ChevronLeft, ChevronRight } from 'lucide-react';
-import { getRecords, getSchema } from '../services/api';
+import { Search, Database, ChevronLeft, ChevronRight, Download } from 'lucide-react';
+import { getRecords, getSchema, exportCSV, exportExcel } from '../services/api';
 import { useTranslation } from '../i18n/LanguageContext';
 
 export default function DataExplorer() {
@@ -65,9 +65,19 @@ export default function DataExplorer() {
 
     return (
         <>
-            <div className="page-header">
-                <h2>{t('dataExplorer.title')}</h2>
-                <p>{t('dataExplorer.subtitle')}</p>
+            <div className="page-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start' }}>
+                <div>
+                    <h2>{t('dataExplorer.title')}</h2>
+                    <p>{t('dataExplorer.subtitle')}</p>
+                </div>
+                <div style={{ display: 'flex', gap: 8 }}>
+                    <button className="btn btn-secondary btn-sm" onClick={() => exportCSV()}>
+                        <Download size={14} /> {t('dataExplorer.exportCsv')}
+                    </button>
+                    <button className="btn btn-secondary btn-sm" onClick={() => exportExcel()}>
+                        <Download size={14} /> {t('dataExplorer.exportExcel')}
+                    </button>
+                </div>
             </div>
 
             {/* Search Filter */}

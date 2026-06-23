@@ -7,7 +7,7 @@ import {
     BarChart3, Download, TrendingUp, Hash,
     Layers, PieChart as PieIcon, RefreshCw, CheckCircle
 } from 'lucide-react';
-import { getAnalytics, exportCSV } from '../services/api';
+import { getAnalytics, exportCSV, exportExcel } from '../services/api';
 import { useTranslation } from '../i18n/LanguageContext';
 
 const CHART_COLORS = [
@@ -44,10 +44,10 @@ export default function Analytics() {
 
     useEffect(() => { fetchData(); }, []);
 
-    const handleExport = async () => {
+    const handleExport = async (fmt) => {
         setExporting(true);
         try {
-            await exportCSV();
+            await (fmt === 'xlsx' ? exportExcel() : exportCSV());
         } catch (e) {
             console.error(e);
         } finally {
@@ -116,8 +116,11 @@ export default function Analytics() {
                     <button className="btn btn-secondary btn-sm" onClick={fetchData}>
                         <RefreshCw size={14} /> {t('analytics.refresh')}
                     </button>
-                    <button className="btn btn-primary btn-sm" onClick={handleExport} disabled={exporting}>
+                    <button className="btn btn-primary btn-sm" onClick={() => handleExport('csv')} disabled={exporting}>
                         <Download size={14} /> {exporting ? t('analytics.exporting') : t('analytics.exportCsv')}
+                    </button>
+                    <button className="btn btn-secondary btn-sm" onClick={() => handleExport('xlsx')} disabled={exporting}>
+                        <Download size={14} /> {t('dataExplorer.exportExcel')}
                     </button>
                 </div>
             </div>

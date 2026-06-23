@@ -10,6 +10,7 @@ if PROJECT_ROOT not in sys.path:
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from backend.database import init_database
+from backend.seed_demo import seed_demo
 from backend.routes import pipeline, data, ws
 
 # Setup logging
@@ -56,6 +57,7 @@ async def startup():
     os.makedirs(os.path.join(PROJECT_ROOT, "data", "quarantine"), exist_ok=True)
     os.makedirs(os.path.join(PROJECT_ROOT, "logs"), exist_ok=True)
     init_database()
+    seed_demo()
     logger.info("FluxCLI API started successfully")
 
 

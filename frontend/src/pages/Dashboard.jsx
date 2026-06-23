@@ -1,9 +1,10 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 import {
     Upload, Play, FileText, CheckCircle, XCircle,
-    Clock, Database, AlertTriangle, Zap, BarChart3, Trash2
+    Clock, Database, AlertTriangle, Zap, BarChart3, Trash2, Download
 } from 'lucide-react';
-import { launchPipeline, getRuns, resetData } from '../services/api';
+import { launchPipeline, getRun, resetData, exportCSV, exportExcel } from '../services/api';
+import { getActiveRunId, setActiveRunId } from '../services/runState';
 import { useWebSocket } from '../hooks/useWebSocket';
 import { useTranslation } from '../i18n/LanguageContext';
 
@@ -35,24 +36,20 @@ export default function Dashboard() {
         if (!currentRunId || !isRunning) return;
         const interval = setInterval(async () => {
             try {
-                const runs = await getRuns(1, 0);
-                if (runs.length > 0 && runs[0].id === currentRunId) {
-                    const run = runs[0];
-                    if (run.status === 'SUCCESS' || run.status === 'FAILED') {
-                        setLastRun(run);
-                        setIsRunning(false);
-                    }
+                const run = await getRun(currentRunId);
+                if (run.status === 'SUCCESS' || run.status === 'FAILED') {
+                    setLastRun(run);
+                    setIsRunning(false);
+                    if (run.status === 'SUCCESS') setActiveRunId(currentRunId);
                 }
             } catch (e) { /* ignore poll errors */ }
         }, 2000);
         return () => clearInterval(interval);
     }, [currentRunId, isRunning]);
 
-    // Load last run on mount
+    // Load the active run (demo for a fresh visitor, or this session's run) on mount
     useEffect(() => {
-        getRuns(1, 0).then(runs => {
-            if (runs.length > 0) setLastRun(runs[0]);
-        }).catch(() => { });
+        getRun(getActiveRunId()).then(run => setLastRun(run)).catch(() => { });
     }, []);
 
     const handleLaunch = async () => {
@@ -97,7 +94,8 @@ export default function Dashboard() {
         setResetting(true);
         try {
             await resetData();
-            setLastRun(null);
+            setActiveRunId('demo');
+            getRun('demo').then(run => setLastRun(run)).catch(() => setLastRun(null));
             clearLogs();
             setFile(null);
             setCurrentRunId(null);
@@ -292,6 +290,14 @@ export default function Dashboard() {
                                 {t('dashboard.lastRun')} <strong style={{ color: 'var(--text-secondary)' }}>{lastRun.file_name}</strong>
                                 {' — '}{lastRun.status} in {lastRun.duration}s
                             </span>
+                            <div style={{ marginLeft: 'auto', display: 'flex', gap: 8 }}>
+                                <button className="btn btn-secondary btn-sm" onClick={() => exportCSV()}>
+                                    <Download size={14} /> {t('dataExplorer.exportCsv')}
+                                </button>
+                                <button className="btn btn-secondary btn-sm" onClick={() => exportExcel()}>
+                                    <Download size={14} /> {t('dataExplorer.exportExcel')}
+                                </button>
+                            </div>
                         </div>
                     )}
                 </div>

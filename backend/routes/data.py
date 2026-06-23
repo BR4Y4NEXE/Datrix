@@ -24,17 +24,6 @@ logger = logging.getLogger(__name__)
 router = APIRouter(tags=["Data"])
 
 
-def _get_latest_run_id() -> Optional[str]:
-    """Get the run_id of the latest successful pipeline run."""
-    with get_connection() as conn:
-        row = conn.execute(
-            """SELECT id FROM pipeline_runs
-               WHERE status = 'SUCCESS'
-               ORDER BY started_at DESC LIMIT 1"""
-        ).fetchone()
-    return row["id"] if row else None
-
-
 def _get_schema_for_run(run_id: str) -> List[Dict]:
     """Get column schema for a specific run."""
     with get_connection() as conn:
@@ -51,7 +40,7 @@ def _get_schema_for_run(run_id: str) -> List[Dict]:
 async def get_schema(run_id: Optional[str] = None):
     """Get the column schema for a dataset. Defaults to latest run."""
     if not run_id:
-        run_id = _get_latest_run_id()
+        run_id = "demo"  # per-visitor isolation: never fall back to another visitor's run
     if not run_id:
         raise HTTPException(status_code=404, detail="No successful pipeline runs found")
 
@@ -82,7 +71,7 @@ async def get_records(
 ):
     """Query dataset records with pagination and search."""
     if not run_id:
-        run_id = _get_latest_run_id()
+        run_id = "demo"  # per-visitor isolation: never fall back to another visitor's run
     if not run_id:
         return PaginatedRecords(
             records=[], total=0, page=1, per_page=per_page, total_pages=1
@@ -198,7 +187,7 @@ async def get_analytics(run_id: Optional[str] = None):
     from the dataset schema and generates aggregations.
     """
     if not run_id:
-        run_id = _get_latest_run_id()
+        run_id = "demo"  # per-visitor isolation: never fall back to another visitor's run
     if not run_id:
         return {
             "charts": [],
@@ -361,12 +350,12 @@ async def get_analytics(run_id: Optional[str] = None):
                         except Exception:
                             pass
 
-        # Data quality from pipeline_runs
+        # Data quality for THIS run only (don't leak other visitors' runs)
         quality = conn.execute("""
             SELECT id, file_name, status, total_read, total_valid, total_rejected,
                    db_inserts, db_updates, started_at
-            FROM pipeline_runs ORDER BY started_at DESC LIMIT 20
-        """).fetchall()
+            FROM pipeline_runs WHERE id = ?
+        """, (run_id,)).fetchall()
 
     return {
         "charts": charts,
@@ -385,15 +374,13 @@ async def get_analytics(run_id: Optional[str] = None):
 
 
 @router.get("/data/export")
-async def export_csv(run_id: Optional[str] = None):
-    """Export dataset as a downloadable CSV (dynamic columns)."""
+async def export_data(run_id: Optional[str] = None, format: str = Query("csv", pattern="^(csv|xlsx)$")):
+    """Export dataset as a downloadable CSV or Excel file (dynamic columns)."""
     from fastapi.responses import StreamingResponse
     import io, csv
 
     if not run_id:
-        run_id = _get_latest_run_id()
-    if not run_id:
-        raise HTTPException(status_code=404, detail="No data to export")
+        run_id = "demo"  # per-visitor isolation: never fall back to another visitor's run
 
     with get_connection() as conn:
         rows = conn.execute(
@@ -409,6 +396,17 @@ async def export_csv(run_id: Optional[str] = None):
     # Get all column names from schema
     schema = _get_schema_for_run(run_id)
     columns = [s["column_name"] for s in schema] if schema else list(records[0].keys())
+
+    if format == "xlsx":
+        df = pd.DataFrame(records, columns=columns)
+        buf = io.BytesIO()
+        df.to_excel(buf, index=False, engine="openpyxl")
+        buf.seek(0)
+        return StreamingResponse(
+            buf,
+            media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            headers={"Content-Disposition": "attachment; filename=datrix_export.xlsx"},
+        )
 
     output = io.StringIO()
     writer = csv.DictWriter(output, fieldnames=columns, extrasaction='ignore')
@@ -446,6 +444,10 @@ async def reset_database():
                 fpath = os.path.join(q_dir, fname)
                 if fname.endswith(".csv"):
                     os.remove(fpath)
+
+        # Re-seed the demo run so the dashboard is never empty
+        from backend.seed_demo import seed_demo
+        seed_demo()
 
         logger.info("Database and quarantine files reset successfully")
         return {"status": "ok", "message": "All data cleared. Ready for a new CSV upload."}

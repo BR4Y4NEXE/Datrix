@@ -1,0 +1,61 @@
+Date,Product,Category,Region,Quantity,Unit Price,Revenue
+2025-01-01,Wireless Mouse,Accessories,East,1,24.99,24.99
+2025-01-02,4K Monitor,Electronics,South,4,349.00,1396.00
+2025-01-03,Wireless Mouse,Accessories,Central,11,24.99,274.89
+2025-01-04,Wireless Mouse,Accessories,West,10,24.99,249.90
+2025-01-05,Laptop Pro 15,Electronics,North,1,1299.00,1299.00
+2025-01-06,4K Monitor,Electronics,Central,4,349.00,1396.00
+2025-01-07,Desk Lamp,Furniture,Central,1,34.50,34.50
+2025-01-08,4K Monitor,Electronics,Central,12,349.00,4188.00
+2025-01-09,Webcam HD,Electronics,West,4,79.00,316.00
+2025-01-10,Desk Lamp,Furniture,North,5,34.50,172.50
+2025-01-11,Mechanical Keyboard,Accessories,West,12,89.50,1074.00
+2025-01-12,Noise-Cancel Headset,Audio,South,5,199.00,995.00
+2025-01-13,4K Monitor,Electronics,North,6,349.00,2094.00
+2025-01-14,Wireless Mouse,Accessories,North,7,24.99,174.93
+2025-01-15,Noise-Cancel Headset,Audio,Central,6,199.00,1194.00
+2025-01-16,USB-C Hub,Accessories,West,1,39.95,39.95
+2025-01-17,Ergo Chair,Furniture,West,2,289.00,578.00
+2025-01-18,Wireless Mouse,Accessories,East,9,24.99,224.91
+2025-01-19,Desk Lamp,Furniture,Central,6,34.50,207.00
+2025-01-20,4K Monitor,Electronics,North,12,349.00,4188.00
+2025-01-21,Laptop Pro 15,Electronics,South,11,1299.00,14289.00
+2025-01-22,USB-C Hub,Accessories,South,2,39.95,79.90
+2025-01-23,Wireless Mouse,Accessories,East,7,24.99,174.93
+2025-01-24,Standing Desk,Furniture,East,11,459.00,5049.00
+2025-01-25,Mechanical Keyboard,Accessories,East,6,89.50,537.00
+2025-01-26,4K Monitor,Electronics,East,11,349.00,3839.00
+2025-01-27,Wireless Mouse,Accessories,South,10,24.99,249.90
+2025-01-28,Ergo Chair,Furniture,South,12,289.00,3468.00
+2025-01-29,Mechanical Keyboard,Accessories,West,8,89.50,716.00
+2025-01-30,USB-C Hub,Accessories,Central,11,39.95,439.45
+2025-01-31,4K Monitor,Electronics,East,11,349.00,3839.00
+2025-02-01,Laptop Pro 15,Electronics,North,4,1299.00,5196.00
+2025-02-02,Noise-Cancel Headset,Audio,East,7,199.00,1393.00
+2025-02-03,Wireless Mouse,Accessories,Central,4,24.99,99.96
+2025-02-04,Noise-Cancel Headset,Audio,West,4,199.00,796.00
+2025-02-05,Webcam HD,Electronics,West,11,79.00,869.00
+2025-02-06,Mechanical Keyboard,Accessories,South,5,89.50,447.50
+2025-02-07,4K Monitor,Electronics,Central,12,349.00,4188.00
+2025-02-08,Ergo Chair,Furniture,Central,5,289.00,1445.00
+2025-02-09,Webcam HD,Electronics,West,10,79.00,790.00
+2025-02-10,Noise-Cancel Headset,Audio,South,4,199.00,796.00
+2025-02-11,Ergo Chair,Furniture,North,8,289.00,2312.00
+2025-02-12,Laptop Pro 15,Electronics,South,2,1299.00,2598.00
+2025-02-13,Mechanical Keyboard,Accessories,West,11,89.50,984.50
+2025-02-14,Desk Lamp,Furniture,West,2,34.50,69.00
+2025-02-15,Webcam HD,Electronics,West,10,79.00,790.00
+2025-02-16,Ergo Chair,Furniture,Central,5,289.00,1445.00
+2025-02-17,Laptop Pro 15,Electronics,North,11,1299.00,14289.00
+2025-02-18,Ergo Chair,Furniture,East,5,289.00,1445.00
+2025-02-19,Wireless Mouse,Accessories,West,5,24.99,124.95
+2025-02-20,Mechanical Keyboard,Accessories,North,8,89.50,716.00
+2025-02-21,USB-C Hub,Accessories,South,9,39.95,359.55
+2025-02-22,Ergo Chair,Furniture,East,2,289.00,578.00
+2025-02-23,Ergo Chair,Furniture,South,10,289.00,2890.00
+2025-02-24,Mechanical Keyboard,Accessories,South,6,89.50,537.00
+2025-02-25,Ergo Chair,Furniture,North,9,289.00,2601.00
+2025-02-26,Desk Lamp,Furniture,West,6,34.50,207.00
+2025-02-27,Laptop Pro 15,Electronics,East,2,1299.00,2598.00
+2025-02-28,USB-C Hub,Accessories,North,4,39.95,159.80
+2025-03-01,4K Monitor,Electronics,North,10,349.00,3490.00

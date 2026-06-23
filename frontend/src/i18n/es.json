@@ -53,7 +53,9 @@
         "noRecordsDesc": "Ejecuta un pipeline para cargar datos, o ajusta los filtros",
         "page": "Página",
         "of": "de",
-        "showing": "Mostrando"
+        "showing": "Mostrando",
+        "exportCsv": "Exportar CSV",
+        "exportExcel": "Exportar Excel"
     },
     "quarantine": {
         "title": "🚧 Cuarentena",
@@ -97,6 +99,7 @@
         "refresh": "Actualizar",
         "exporting": "Exportando...",
         "exportCsv": "Exportar CSV",
+        "exportExcel": "Exportar Excel",
         "totalRecords": "Registros Totales",
         "columns": "Columnas",
         "sum": "Suma",

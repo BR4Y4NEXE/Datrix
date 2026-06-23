@@ -100,13 +100,28 @@ def clean_text_value(val) -> str:
     return str(val).strip()
 
 
-def transform(df: pd.DataFrame) -> TransformResult:
+def _has_content(val) -> bool:
+    """True if the original cell carried a real value (not empty/null)."""
+    return not pd.isna(val) and str(val).strip() != ''
+
+
+def transform(df: pd.DataFrame, strict: Optional[bool] = None) -> TransformResult:
     """
     Dynamically transforms any CSV DataFrame:
     1. Detects column types (numeric, date, text)
     2. Cleans values based on detected types
-    3. Rejects rows where ALL fields are empty/null
+    3. Quarantines rows that are empty/mostly-empty, and — in strict mode —
+       rows where a typed cell had content but failed to parse.
+
+    strict: if None, read from settings.transform.strict. In strict mode a single
+    unparseable date/numeric cell sends the whole row to quarantine. In lax mode
+    parse failures become NULL and the row passes (legacy behavior).
     """
+    from config.settings import settings
+    cfg = settings.transform
+    if strict is None:
+        strict = cfg.strict
+
     total = len(df)
 
     # Strip whitespace from column names
@@ -126,13 +141,19 @@ def transform(df: pd.DataFrame) -> TransformResult:
     # Work on a copy
     processing_df = df.copy()
 
-    # Clean each column based on its detected type
+    # Clean each column based on its detected type, recording hard parse failures:
+    # a cell that had content but cleaned to None is corrupt (not just empty).
+    parse_failures = {}  # row idx -> list of reason strings
     for col_schema in schema:
         col = col_schema.original_name
-        if col_schema.dtype == 'numeric':
-            processing_df[col] = processing_df[col].apply(clean_numeric_value)
-        elif col_schema.dtype == 'date':
-            processing_df[col] = processing_df[col].apply(clean_date_value)
+        if col_schema.dtype in ('numeric', 'date'):
+            clean_fn = clean_numeric_value if col_schema.dtype == 'numeric' else clean_date_value
+            cleaned = processing_df[col].apply(clean_fn)
+            label = "Numérico inválido" if col_schema.dtype == 'numeric' else "Fecha inválida"
+            for idx in processing_df.index:
+                if pd.isna(cleaned.at[idx]) and _has_content(processing_df.at[idx, col]):
+                    parse_failures.setdefault(idx, []).append(f"{label} en '{col}'")
+            processing_df[col] = cleaned
         else:
             processing_df[col] = processing_df[col].apply(clean_text_value)
 
@@ -143,9 +164,8 @@ def transform(df: pd.DataFrame) -> TransformResult:
                 return False
         return True
 
-    empty_mask = processing_df.apply(row_is_empty, axis=1)
+    numeric_cols = [s.original_name for s in schema if s.dtype == 'numeric']
 
-    # Also check for rows with critical issues
     reject_reasons = []
     for idx, row in processing_df.iterrows():
         reasons = []
@@ -161,6 +181,19 @@ def transform(df: pd.DataFrame) -> TransformResult:
         if null_count > 0 and null_count >= total_cols * 0.7 and not row_is_empty(row):
             reasons.append(f"Mostly empty ({null_count}/{total_cols} fields null)")
 
+        # Hard parse failures (strict mode only).
+        if strict and idx in parse_failures:
+            reasons.extend(parse_failures[idx])
+
+        # Optional domain rules (off by default).
+        if cfg.reject_empty_required and null_count > 0 and not row_is_empty(row):
+            reasons.append(f"Campo requerido vacío ({null_count} null)")
+        if cfg.reject_nonpositive_numeric:
+            for c in numeric_cols:
+                v = row[c]
+                if v is not None and not (isinstance(v, float) and pd.isna(v)) and v <= 0:
+                    reasons.append(f"Numérico no positivo en '{c}'")
+
         reject_reasons.append('; '.join(reasons))
 
     processing_df['reject_reason'] = reject_reasons
@@ -169,7 +202,10 @@ def transform(df: pd.DataFrame) -> TransformResult:
     valid_mask = processing_df['reject_reason'] == ''
 
     valid_df = processing_df.loc[valid_mask].drop(columns=['reject_reason']).copy()
-    rejected_df = processing_df.loc[~valid_mask].copy()
+    # Quarantine keeps the ORIGINAL values (e.g. "2025/13/45", "two") so the
+    # reason is auditable — not the cleaned NaN it became.
+    rejected_df = df.loc[~valid_mask].copy()
+    rejected_df['reject_reason'] = processing_df.loc[~valid_mask, 'reject_reason']
 
     # Normalize column names in valid_df to lowercase with underscores
     rename_map = {s.original_name: s.name for s in schema}

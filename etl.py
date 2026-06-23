@@ -4,8 +4,10 @@ import os
 import sys
 import datetime
 import time
+import uuid
 from config.settings import settings
 from src import extractor, transformer, loader, notifier
+from backend.database import get_connection
 
 # Setup Logging
 logging.basicConfig(
@@ -64,17 +66,42 @@ def main():
             logger.info(f"Quarantined {len(result.rejected_df)} rows to {q_path}")
             
         # 5. Load (if not dry-run)
+        run_id = str(uuid.uuid4())
         inserts, updates = 0, 0
         if not args.dry_run:
             data_loader = loader.DataLoader()
             data_loader.init_db()
-            inserts, updates = data_loader.load_data(result.valid_df)
+            # datasets/dataset_schema have a FK to pipeline_runs, so create the
+            # run record before loading.
+            with get_connection() as conn:
+                conn.execute(
+                    """INSERT INTO pipeline_runs (id, status, file_name, dry_run, started_at)
+                       VALUES (?, 'RUNNING', ?, 0, ?)""",
+                    (run_id, os.path.basename(file_path),
+                     datetime.datetime.now().isoformat())
+                )
+                conn.commit()
+            data_loader.save_schema(run_id, result.schema)
+            inserts, updates = data_loader.load_data(result.valid_df, run_id)
             logger.info(f"Load: {inserts} inserted, {updates} updated")
         else:
             logger.info("Dry run: Skipping DB load")
-            
+
         duration = round(time.time() - start_time, 2)
         status = "SUCCESS"
+        if not args.dry_run:
+            with get_connection() as conn:
+                conn.execute(
+                    """UPDATE pipeline_runs SET status=?, finished_at=?, duration=?,
+                       total_read=?, total_valid=?, total_rejected=?,
+                       db_inserts=?, db_updates=? WHERE id=?""",
+                    (status, datetime.datetime.now().isoformat(), duration,
+                     total_read, result.total_valid, result.total_rejected,
+                     inserts, updates, run_id)
+                )
+                conn.commit()
+        # ponytail: leave the run as RUNNING on failure; CLI exits 1 and the
+        # except block logs it. Add a FAILED update if the dashboard needs it.
         logger.info(f"ETL COMPLETED SUCCESSFULLY in {duration}s")
         
         # 6. Notify

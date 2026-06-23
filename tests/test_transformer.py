@@ -66,9 +66,11 @@ def test_transform_dynamic_sales_csv():
     result = transform(df)
 
     assert result.total_processed == 4
-    # All rows should pass (none are fully empty or 70%+ null)
-    # The dynamic transformer no longer rejects by "invalid date" or "missing ID"
-    assert result.total_valid > 0
+    # Strict mode (default): the "Invalid" date row is quarantined; the empty-ID
+    # row is just NULL (empty original, not a parse failure) and still passes.
+    assert result.total_valid == 3
+    assert result.total_rejected == 1
+    assert "Fecha inválida" in result.rejected_df["reject_reason"].iloc[0]
     assert len(result.schema) == 6
 
     # Check schema detected correct types
@@ -106,6 +108,56 @@ def test_transform_amazon_csv():
     assert schema_types["product_category"] == "text"
     assert schema_types["customer_region"] == "text"
     assert schema_types["order_date"] == "date"
+
+
+# Enough clean rows that type detection holds (>0.7), plus one corrupt cell.
+_GOOD_DATES = [f"2025-01-0{i}" for i in range(1, 10)]  # 9 valid dates
+_GOOD_QTYS = [str(i) for i in range(1, 10)]            # 9 valid numerics
+
+
+def test_strict_quarantines_invalid_date():
+    """A date column with an unparseable value sends that row to quarantine."""
+    data = {
+        "Date": _GOOD_DATES + ["2025/13/45"],
+        "Qty": _GOOD_QTYS + ["10"],
+    }
+    result = transform(pd.DataFrame(data), strict=True)
+    assert result.total_rejected == 1
+    assert result.total_valid == 9
+    assert "Fecha inválida" in result.rejected_df["reject_reason"].iloc[0]
+
+
+def test_strict_quarantines_invalid_numeric():
+    """A numeric column with garbage text sends that row to quarantine."""
+    data = {
+        "Date": _GOOD_DATES + ["2025-01-10"],
+        "Qty": _GOOD_QTYS + ["two"],
+    }
+    result = transform(pd.DataFrame(data), strict=True)
+    assert result.total_rejected == 1
+    assert "Numérico inválido" in result.rejected_df["reject_reason"].iloc[0]
+
+
+def test_strict_keeps_empty_cells_valid():
+    """An empty (not unparseable) typed cell is NULL, not a parse failure."""
+    data = {
+        "Date": _GOOD_DATES + [""],
+        "Qty": _GOOD_QTYS + ["10"],
+    }
+    result = transform(pd.DataFrame(data), strict=True)
+    assert result.total_rejected == 0
+    assert result.total_valid == 10
+
+
+def test_lax_mode_passes_dirty_rows():
+    """strict=False restores the legacy behavior: parse failures become NULL."""
+    data = {
+        "Date": _GOOD_DATES + ["2025/13/45"],
+        "Qty": _GOOD_QTYS + ["10"],  # only Date is corrupt, so the row isn't fully empty
+    }
+    result = transform(pd.DataFrame(data), strict=False)
+    assert result.total_rejected == 0
+    assert result.total_valid == 10
 
 
 def test_transform_empty_rows_rejected():

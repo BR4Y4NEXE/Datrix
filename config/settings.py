@@ -19,6 +19,14 @@ class NotifierConfig:
     smtp_recipient: str = os.getenv("SMTP_RECIPIENT", "")
 
 @dataclass
+class TransformConfig:
+    # strict: a single unparseable cell in a date/numeric column quarantines the row.
+    strict: bool = os.getenv("TRANSFORM_STRICT", "true").lower() == "true"
+    # Optional domain rules, off by default (dynamic schema can't know what's "required").
+    reject_empty_required: bool = os.getenv("REJECT_EMPTY_REQUIRED", "false").lower() == "true"
+    reject_nonpositive_numeric: bool = os.getenv("REJECT_NONPOSITIVE_NUMERIC", "false").lower() == "true"
+
+@dataclass
 class AppConfig:
     log_level: str = os.getenv("LOG_LEVEL", "INFO")
     input_dir: str = os.path.join(os.getcwd(), "data", "input")
@@ -29,6 +37,7 @@ class AppConfig:
 class Settings:
     db: DatabaseConfig = field(default_factory=DatabaseConfig)
     notifier: NotifierConfig = field(default_factory=NotifierConfig)
+    transform: TransformConfig = field(default_factory=TransformConfig)
     app: AppConfig = field(default_factory=AppConfig)
 
 settings = Settings()

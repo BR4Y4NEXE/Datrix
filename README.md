@@ -2,43 +2,66 @@
   <img src="https://img.shields.io/badge/Python-3.10+-3776AB?style=for-the-badge&logo=python&logoColor=white" />
   <img src="https://img.shields.io/badge/FastAPI-009688?style=for-the-badge&logo=fastapi&logoColor=white" />
   <img src="https://img.shields.io/badge/React_19-61DAFB?style=for-the-badge&logo=react&logoColor=black" />
-  <img src="https://img.shields.io/badge/Vite_6-646CFF?style=for-the-badge&logo=vite&logoColor=white" />
   <img src="https://img.shields.io/badge/SQLite-003B57?style=for-the-badge&logo=sqlite&logoColor=white" />
-  <img src="https://img.shields.io/badge/WebSocket-010101?style=for-the-badge&logo=socket.io&logoColor=white" />
+  <img src="https://img.shields.io/badge/Tested_with-Pytest-0A9EDC?style=for-the-badge&logo=pytest&logoColor=white" />
+  <img src="https://img.shields.io/badge/License-MIT-green?style=for-the-badge" />
 </p>
 
 # ⚡ Datrix — Dynamic ETL Pipeline & Real-Time Dashboard
 
-> **Las empresas que trabajan con archivos CSV no tienen visibilidad de qué pasó con sus datos ni cuántos registros fallaron. Datrix automatiza ese proceso y lo hace auditable en tiempo real.**
+> **Companies that move data around in CSV files have no idea what happened to it — how many rows were loaded, how many silently failed, or why. Datrix automates that pipeline and makes every row auditable in real time.**
+
+<p align="center">
+  <a href="URL"><b>🔗 LIVE DEMO</b></a>
+  &nbsp;•&nbsp;
+  <a href="https://github.com/BR4Y4NEXE/Datrix"><b>💻 Repository</b></a>
+</p>
+
+<!-- Replace URL above with your live Vercel deployment link -->
 
 ---
 
-## 🎯 Propósito
+## ✨ Key Features
 
-Datrix es una plataforma Full-Stack diseñada para solucionar el caos en el procesamiento de datos. Lo que comenzó como una herramienta CLI para pipelines de ventas evolucionó en un motor de ETL (Extract, Transform, Load) **totalmente dinámico** que se adapta a cualquier esquema de CSV.
-
-- **Detección dinámica de esquemas:** Identifica automáticamente tipos de datos (`numeric`, `date`, `text`) sin configuración previa.
-- **Monitoreo en tiempo real:** Visualización del progreso mediante WebSockets (Live Logs).
-- **Dashboard Interactivo:** Métricas de calidad, historial de ejecuciones y analítica visual.
-- **Gobernanza de Datos:** Sistema de cuarentena que aísla registros inválidos para su auditoría.
-- **Notificaciones Automatizadas:** Reportes automáticos vía Email y Slack al finalizar el proceso.
-
----
-
-## 📸 Screenshots (Próximamente)
-
-> [!NOTE]
-> Aquí se incluirán imágenes del Dashboard, Data Explorer y el sistema de Quarantine.
+- **Dynamic schema detection** — auto-infers column types (`numeric`, `date`, `text`) from any CSV, zero config.
+- **Real-time monitoring** — live pipeline progress and logs streamed over WebSockets.
+- **Interactive dashboard** — data quality metrics, run history, and visual analytics.
+- **Data governance** — a quarantine system isolates invalid rows for auditing instead of dropping them silently.
+- **Automated notifications** — email and Slack reports the moment a run finishes.
+- **Bilingual UI** — English / Spanish (i18n).
 
 ---
 
-## 🏗️ Arquitectura y Despliegue
+## 🎯 Purpose
 
-El proyecto está diseñado de forma modular para garantizar escalabilidad y facilidad de despliegue:
+Datrix is a full-stack platform built to tame the chaos of data processing. What started as a CLI tool for sales pipelines evolved into a **fully dynamic** ETL (Extract, Transform, Load) engine that adapts to any CSV schema.
 
-- **Frontend:** React 19 + Vite 6 (Desplegado en **Vercel**).
-- **Backend:** FastAPI + SQLite (Desplegado en **Render**).
-- **Comunicación:** REST API para datos y WebSockets para logs en vivo.
+Rather than hard-coding columns, Datrix inspects incoming data, infers its structure, transforms and validates it, and persists a complete audit trail of every row — loaded, validated, or rejected — all while streaming progress live to a dashboard.
+
+---
+
+## 📸 Screenshots
+
+<!-- Drop the real images into docs/ and they will render automatically. -->
+
+![Dashboard](docs/dashboard.png)
+<!-- TODO: add the main dashboard screenshot at docs/dashboard.png -->
+
+![Data Explorer](docs/data-explorer.png)
+<!-- TODO: add the Data Explorer screenshot at docs/data-explorer.png -->
+
+![Quarantine](docs/quarantine.png)
+<!-- TODO: add the Quarantine view screenshot at docs/quarantine.png -->
+
+---
+
+## 🏗️ Architecture & Deployment
+
+The project is modular by design, for scalability and easy deployment:
+
+- **Frontend:** React 19 + Vite 6 (deployed on **Vercel**).
+- **Backend:** FastAPI + SQLite (deployed on **Render**).
+- **Communication:** REST API for data, WebSockets for live logs.
 
 ```
 ┌─────────────────────────────────┐      ┌──────────────────────────────────┐
@@ -53,27 +76,29 @@ El proyecto está diseñado de forma modular para garantizar escalabilidad y fac
 
 ---
 
-## 🔥 El Desafío de Ingeniería
+## 🔥 The Engineering Challenge
 
-Este proyecto representa una transformación arquitectónica completa:
+This project was a complete architectural transformation. Each step was a deliberate trade-off, not just a feature:
 
-1. **De Síncrono a Event-Driven:** El pipeline original bloqueaba la ejecución. Se rediseñó usando `asyncio` y WebSockets para permitir múltiples ejecuciones concurrentes y monitoreo en vivo.
-2. **De Esquema Fijo a Motor Dinámico:** El sistema pasó de procesar 6 columnas fijas a detectar y transformar cualquier estructura CSV mediante una capa de abstracción de metadatos.
-3. **Persistencia y Auditoría:** Se implementó una capa de persistencia en SQLite para llevar un registro histórico de cada fila procesada, validada o rechazada.
+1. **Synchronous → Event-Driven.** The original pipeline blocked on every run, so only one job could execute and there was no visibility into progress. **Decision:** rebuild around `asyncio` + WebSockets. **Why:** it unlocks concurrent runs *and* live monitoring from the same change, instead of bolting on a polling layer that would have added latency and load for no real-time guarantee.
+
+2. **Fixed Schema → Dynamic Engine.** The system handled exactly 6 hard-coded columns, which meant a new file format meant new code. **Decision:** introduce a metadata abstraction layer that detects and transforms any CSV structure at runtime. **Why:** moving schema knowledge from code into data turns "ship a release" into "drop in a file," which is the whole value proposition of the tool.
+
+3. **Ephemeral → Persistent & Auditable.** Results vanished once a run ended, so failures couldn't be investigated. **Decision:** add a SQLite persistence layer recording every row as processed, validated, or rejected. **Why:** auditability is the product — a quarantine you can't query is just a silent `DROP`. SQLite keeps that history zero-ops to deploy, matching the project's single-file, low-friction footprint.
 
 ---
 
-## 🧪 Calidad y Testing
+## 🧪 Quality & Testing
 
-La fiabilidad del motor de transformación está garantizada mediante una suite de pruebas con **Pytest**.
+The reliability of the transformation engine is backed by a **Pytest** suite.
 
-- **Cobertura Crítica:** El `transformer.py` cuenta con tests exhaustivos que verifican:
-  - Limpieza y normalización de valores numéricos, fechas y texto.
-  - Detección automática del tipo de columna basado en el contenido.
-  - Validación de esquemas dinámicos con diferentes tipos de archivos (Sales CSV, Amazon-style CSV, etc.).
-  - Rechazo controlado de filas inválidas o incompletas.
+- **Critical coverage:** `transformer.py` is tested for:
+  - Cleaning and normalizing numeric, date, and text values.
+  - Auto-detecting column type based on content.
+  - Validating dynamic schemas across different file types (Sales CSV, Amazon-style CSV, etc.).
+  - Controlled rejection of invalid or incomplete rows.
 
-Para ejecutar los tests:
+Run the tests:
 ```bash
 pytest tests/test_transformer.py
 ```
@@ -82,14 +107,14 @@ pytest tests/test_transformer.py
 
 ## 🚀 Quick Start
 
-### 1. Clonar el Repositorio
+### 1. Clone the repository
 ```bash
 git clone https://github.com/BR4Y4NEXE/Datrix.git
 cd Datrix
 ```
 
-### 2. Configuración (Variables de Entorno)
-Copia el archivo `.env.example` a `.env` y configura tus credenciales de SMTP y Slack.
+### 2. Configuration (environment variables)
+Copy `.env.example` to `.env` and set your SMTP and Slack credentials.
 
 ### 3. Backend (Render)
 ```bash
@@ -107,32 +132,32 @@ npm run dev
 
 ---
 
-## 📂 Estructura del Proyecto
+## 📂 Project Structure
 
 ```
 Datrix/
-├── backend/               # FastAPI Application & Business Logic
-├── frontend/              # React Application (Dashboard & UI)
-├── src/                   # Core ETL Modules (Extractor, Transformer, Loader)
-├── tests/                 # Pytest Suite
-├── data/                  # Input samples & Quarantine reports
-└── etl.py                 # CLI Entry point (Legacy support)
+├── backend/               # FastAPI application & business logic
+├── frontend/              # React application (dashboard & UI)
+├── src/                   # Core ETL modules (Extractor, Transformer, Loader)
+├── tests/                 # Pytest suite
+├── data/                  # Input samples & quarantine reports
+└── etl.py                 # CLI entry point (legacy support)
 ```
 
 ---
 
 ## 🛠️ Tech Stack
 
-| Capa | Tecnología |
+| Layer | Technology |
 |-------|-----------|
 | **Core ETL** | Python, Pandas, SQLite, Dataclasses |
 | **Backend** | FastAPI, Uvicorn, WebSocket |
 | **Frontend** | React 19, Vite 6, Recharts, Lucide |
 | **Testing** | Pytest |
-| **Despliegue** | Vercel (Frontend), Render (Backend) |
+| **Deployment** | Vercel (frontend), Render (backend) |
 
 ---
 
-## 📝 Licencia
+## 📝 License
 
-Este proyecto está bajo la licencia MIT.
+This project is licensed under the MIT License.
